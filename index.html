@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1a2e1a"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="KG Agropet"/>
+  <title>KG Agropet — Preços</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ═══ TELA: LOGIN ═══ -->
+<div id="tela-login" class="tela ativa">
+  <div class="bg-deco" aria-hidden="true">
+    <span>🌿</span><span>🐾</span><span>🌾</span>
+  </div>
+  <div class="login-wrap">
+    <div class="logo-block">
+      <div class="logo-symbol">
+        <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+          <ellipse cx="22" cy="22" rx="18" ry="20" fill="#c94f1a"/>
+          <path d="M14 11 Q10 18 13 26 Q17 20 20 13 Z" fill="#1a2e1a" opacity="0.85"/>
+          <path d="M19 15 Q23 10 29 11 Q35 13 36 19 Q38 23 35 26 Q37 24 39 26 Q37 29 34 28 Q32 33 27 36 Q22 39 17 37 Q12 35 11 28 Q9 21 12 16 Z" fill="#1a2e1a" opacity="0.9"/>
+          <path d="M29 11 Q33 7 37 10 Q34 15 29 15 Z" fill="#1a2e1a" opacity="0.9"/>
+        </svg>
+      </div>
+      <div class="logo-nome">KG AGROPET</div>
+      <div class="logo-tag">Qualidade que alimenta</div>
+    </div>
+
+    <div class="gold-line"></div>
+
+    <div class="campo-grupo">
+      <label class="campo-label">Entrar como</label>
+      <div class="tipo-row">
+        <button class="tipo-btn ativo" id="btn-admin" onclick="selecionarTipo('admin')">
+          🛡 Administrador
+        </button>
+        <button class="tipo-btn" id="btn-consulta" onclick="selecionarTipo('consulta')">
+          👁 Consulta
+        </button>
+      </div>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="campo-label" for="inp-usuario">Usuário</label>
+      <input class="campo-input" id="inp-usuario" type="text" placeholder="Digite seu usuário" autocomplete="username"/>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="campo-label" for="inp-senha">Senha</label>
+      <input class="campo-input" id="inp-senha" type="password" placeholder="Digite sua senha" autocomplete="current-password"/>
+    </div>
+
+    <div id="login-erro" class="erro-msg" style="display:none">Usuário ou senha incorretos</div>
+
+    <button class="btn-primario" onclick="fazerLogin()">ENTRAR</button>
+
+    <div class="gold-line" style="margin-top:auto"></div>
+  </div>
+</div>
+
+<!-- ═══ TELA: BUSCA ═══ -->
+<div id="tela-busca" class="tela">
+  <header class="cabecalho">
+    <span class="cabecalho-titulo">📦 Produtos</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="badge" id="badge-busca"></span>
+      <button class="btn-icone" onclick="fazerLogout()" title="Sair" aria-label="Sair">⬡</button>
+    </div>
+  </header>
+
+  <div class="busca-area">
+    <div class="busca-box">
+      <span class="busca-icone">🔍</span>
+      <input class="busca-input" id="inp-busca" type="search" placeholder="Buscar por nome ou código..." oninput="filtrarProdutos()" autocomplete="off"/>
+    </div>
+  </div>
+
+  <div class="cats-scroll" id="cats-lista" role="list" aria-label="Categorias"></div>
+
+  <div class="produto-lista" id="produto-lista" role="list" aria-label="Produtos"></div>
+
+  <button class="fab" id="fab-add" onclick="abrirCadastro()" aria-label="Adicionar produto">+</button>
+</div>
+
+<!-- ═══ TELA: DETALHE ═══ -->
+<div id="tela-detalhe" class="tela">
+  <header class="cabecalho">
+    <button class="btn-voltar" onclick="irPara('tela-busca')" aria-label="Voltar">←</button>
+    <span class="cabecalho-titulo">Detalhes</span>
+    <span class="badge" id="badge-detalhe"></span>
+  </header>
+
+  <div class="detalhe-corpo" id="detalhe-corpo"></div>
+</div>
+
+<!-- ═══ TELA: EDITAR / CADASTRAR ═══ -->
+<div id="tela-editar" class="tela">
+  <header class="cabecalho">
+    <button class="btn-voltar" id="editar-voltar-btn" aria-label="Voltar">←</button>
+    <span class="cabecalho-titulo" id="editar-titulo">Editar produto</span>
+    <span class="badge badge-admin">ADMIN</span>
+  </header>
+
+  <div class="editar-corpo">
+    <input type="hidden" id="edit-id"/>
+
+    <div class="campo-grupo">
+      <label class="campo-label" for="edit-nome">Nome do produto</label>
+      <input class="campo-input" id="edit-nome" type="text" placeholder="Ex: Ração Premium Cão 15kg"/>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="campo-label" for="edit-codigo">Código</label>
+      <input class="campo-input" id="edit-codigo" type="text" placeholder="Ex: #001"/>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="campo-label" for="edit-categoria">Categoria</label>
+      <select class="campo-select" id="edit-categoria"></select>
+    </div>
+
+    <div class="preco-linha">
+      <div class="campo-grupo" style="flex:1">
+        <label class="campo-label campo-label-compra" for="edit-compra">Compra (R$)</label>
+        <input class="campo-input" id="edit-compra" type="number" min="0" step="0.01" placeholder="0,00" inputmode="decimal"/>
+      </div>
+      <div class="campo-grupo" style="flex:1">
+        <label class="campo-label campo-label-venda" for="edit-venda">Venda (R$)</label>
+        <input class="campo-input" id="edit-venda" type="number" min="0" step="0.01" placeholder="0,00" inputmode="decimal"/>
+      </div>
+    </div>
+
+    <div id="edit-erro" class="erro-msg" style="display:none">Preencha todos os campos obrigatórios.</div>
+
+    <button class="btn-primario" onclick="salvarProduto()">💾 SALVAR</button>
+
+    <button class="btn-deletar" id="btn-deletar" onclick="deletarProduto()" style="display:none">
+      🗑 Excluir produto
+    </button>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
