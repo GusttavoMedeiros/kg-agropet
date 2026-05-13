@@ -37,7 +37,15 @@ const supabase = {
       query += `&categoria=eq.${encodeURIComponent(filtros.categoria)}`;
     }
     if (filtros.busca) {
-      query += `&or=(nome.ilike.*${encodeURIComponent(filtros.busca)}*,codigo.ilike.*${encodeURIComponent(filtros.busca)}*)`;
+      // Busca com e sem acento — normaliza para latin base
+      const termo = filtros.busca;
+      const semAcento = termo.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      // Tenta os dois termos para cobrir ambos os casos
+      if (semAcento !== termo) {
+        query += `&or=(nome.ilike.*${encodeURIComponent(termo)}*,nome.ilike.*${encodeURIComponent(semAcento)}*,codigo.ilike.*${encodeURIComponent(termo)}*)`;
+      } else {
+        query += `&or=(nome.ilike.*${encodeURIComponent(termo)}*,codigo.ilike.*${encodeURIComponent(termo)}*)`;
+      }
     }
     return this.request(query);
   },
