@@ -1,406 +1,105 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+// ═══════════════════════════════════════════════
+//  CONFIGURAÇÃO SUPABASE — KG AGROPET
+// ═══════════════════════════════════════════════
 
-/* ═══ RESET & BASE ═══ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+const SUPABASE_URL = 'https://xjivhwbrdjhipdfieqlg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqaXZod2JyZGpoaXBkZmllcWxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNjA4MzEsImV4cCI6MjA5MzkzNjgzMX0.v24Zopxx74_X-rNsKzGMDr0LU5OKdJsWD8036XaGp4s';
 
-:root {
-  --verde:         #1a2e1a;
-  --verde2:        #223322;
-  --verde3:        #2a3f2a;
-  --dourado:       #c9a84c;
-  --dourado-light: #e8c96a;
-  --dourado-dim:   #7a6230;
-  --laranja:       #c94f1a;
-  --branco:        #f5f0e8;
-  --texto-sec:     #c9b87a;
-  --texto-dim:     #8a7a5a;
-  --borda:         rgba(201,168,76,0.35);
-  --borda-forte:   rgba(201,168,76,0.70);
-  --vermelho:      #e07070;
-}
+const supabase = {
+  url: SUPABASE_URL,
+  key: SUPABASE_KEY,
 
-html, body {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--verde);
-  color: var(--branco);
-  overflow: hidden;
-}
+  async request(path, options = {}) {
+    const res = await fetch(`${this.url}/rest/v1/${path}`, {
+      ...options,
+      headers: {
+        'apikey': this.key,
+        'Authorization': `Bearer ${this.key}`,
+        'Content-Type': 'application/json',
+        'Prefer': options.prefer || 'return=representation',
+        ...(options.headers || {})
+      }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Erro na requisição');
+    }
+    return res.status === 204 ? null : res.json();
+  },
 
-/* ═══ TELAS ═══ */
-.tela {
-  display: none;
-  flex-direction: column;
-  height: 100vh;
-  width: 100%;
-  position: fixed;
-  top: 0; left: 0;
-  background: var(--verde);
-  overflow: hidden;
-}
-.tela.ativa { display: flex; }
+  // Buscar produtos com paginação
+  async getProdutos(filtros = {}) {
+    const limit  = filtros.limit  || 50;
+    const offset = filtros.offset || 0;
+    let query = `produtos?select=*&limit=${limit}&offset=${offset}`;
+    if (filtros.categoria && filtros.categoria !== 'Todos') {
+      query += `&categoria=eq.${encodeURIComponent(filtros.categoria)}`;
+    }
+    if (filtros.busca) {
+      query += `&or=(nome.ilike.*${encodeURIComponent(filtros.busca)}*,codigo.ilike.*${encodeURIComponent(filtros.busca)}*)`;
+    }
+    return this.request(query);
+  },
 
-/* Textura de fundo sutil */
-.tela::before {
-  content: '';
-  position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(ellipse at 80% 15%, rgba(201,168,76,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse at 15% 85%, rgba(201,168,76,0.05) 0%, transparent 45%);
-}
-.tela > * { position: relative; z-index: 1; }
+  // Buscar produto por ID
+  async getProdutoPorId(id) {
+    const data = await this.request(`produtos?id=eq.${id}&select=*`);
+    return data[0] || null;
+  },
 
-/* ═══ LOGIN ═══ */
-.bg-deco {
-  position: absolute; bottom: 30px; left: 0; right: 0;
-  display: flex; justify-content: center; gap: 2rem;
-  font-size: 3.5rem; opacity: 0.05; pointer-events: none;
-  z-index: 0;
-}
+  // Criar produto
+  async criarProduto(produto) {
+    return this.request('produtos', {
+      method: 'POST',
+      body: JSON.stringify(produto)
+    });
+  },
 
-.login-wrap {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 1rem;
-  padding: 2rem 1.5rem 2rem;
-  height: 100%; overflow-y: auto;
-  position: relative; z-index: 1;
-}
+  // Atualizar produto
+  async atualizarProduto(id, dados) {
+    return this.request(`produtos?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dados)
+    });
+  },
 
-.logo-block {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 6px;
-  margin-bottom: 0.25rem; margin-top: 0.5rem;
-}
+  // Deletar produto
+  async deletarProduto(id) {
+    return this.request(`produtos?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { 'Prefer': 'return=minimal' }
+    });
+  },
 
-.logo-symbol {
-  width: 76px; height: 76px; border-radius: 20px;
-  background: linear-gradient(145deg, rgba(201,168,76,0.15), rgba(201,168,76,0.04));
-  border: 2px solid var(--dourado-dim);
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-  box-shadow: 0 0 0 1px rgba(201,168,76,0.12), inset 0 0 16px rgba(201,168,76,0.06);
-}
-.logo-symbol::before {
-  content: '';
-  position: absolute; inset: 4px; border-radius: 16px;
-  border: 0.5px solid rgba(201,168,76,0.25);
-  pointer-events: none;
-}
-.logo-symbol::after {
-  content: '';
-  position: absolute; inset: 0; border-radius: 20px;
-  background: linear-gradient(135deg, rgba(201,168,76,0.08) 0%, transparent 60%);
-  pointer-events: none;
-}
+  // Buscar usuário
+  async getUsuario(usuario, senha) {
+    const data = await this.request(
+      `usuarios?usuario=eq.${encodeURIComponent(usuario)}&senha=eq.${encodeURIComponent(senha)}&select=*`
+    );
+    return data[0] || null;
+  },
 
-.logo-nome {
-  font-family: 'Cinzel', serif;
-  font-size: 20px; font-weight: 700;
-  color: var(--dourado); letter-spacing: 0.14em;
-  margin-top: 4px;
-}
+  // Histórico de preços
+  async getHistorico(produtoId) {
+    return this.request(
+      `historico_precos?produto_id=eq.${produtoId}&order=alterado_em.desc&limit=10&select=*`
+    );
+  },
 
-.logo-tag {
-  font-size: 9px; font-weight: 500;
-  color: var(--texto-sec); letter-spacing: 0.20em;
-  text-transform: uppercase;
-}
+  async salvarHistorico(dados) {
+    return this.request('historico_precos', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    });
+  },
 
-.gold-line {
-  width: 100%; height: 0.5px;
-  background: linear-gradient(90deg, transparent, var(--dourado-dim), transparent);
-}
-
-/* ═══ CAMPOS ═══ */
-.campo-grupo { width: 100%; display: flex; flex-direction: column; gap: 6px; }
-.campo-label {
-  font-size: 11px; color: var(--texto-sec);
-  letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
-}
-.campo-label-compra { color: var(--vermelho); }
-.campo-label-venda  { color: var(--dourado-light); }
-
-.campo-input {
-  width: 100%; padding: 13px 14px;
-  border: 0.5px solid var(--borda); border-radius: 10px;
-  font-size: 15px; color: var(--branco);
-  background: rgba(255,255,255,0.05);
-  -webkit-appearance: none;
-}
-.campo-input:focus { outline: none; border-color: var(--dourado-dim); background: rgba(255,255,255,0.08); }
-.campo-input::placeholder { color: var(--texto-dim); }
-
-.campo-select {
-  width: 100%; padding: 13px 14px;
-  border: 0.5px solid var(--borda); border-radius: 10px;
-  font-size: 15px; color: var(--branco);
-  background: rgba(30,50,30,0.9);
-  -webkit-appearance: none; appearance: none;
-}
-.campo-select:focus { outline: none; border-color: var(--dourado-dim); }
-
-/* Tipo de usuário */
-.tipo-row { display: flex; gap: 8px; width: 100%; }
-.tipo-btn {
-  flex: 1; padding: 11px 6px;
-  border: 0.5px solid var(--borda); border-radius: 10px;
-  font-size: 13px; cursor: pointer;
-  background: rgba(255,255,255,0.03);
-  color: var(--texto-dim); text-align: center;
-  transition: all 0.15s;
-}
-.tipo-btn.ativo {
-  border-color: var(--dourado-dim);
-  background: rgba(201,168,76,0.14);
-  color: var(--dourado); font-weight: 600;
-}
-
-/* ═══ BOTÕES ═══ */
-.btn-primario {
-  width: 100%; padding: 14px;
-  background: linear-gradient(135deg, #c9a84c, #a8842e);
-  color: #1a1200; border: none; border-radius: 10px;
-  font-size: 15px; font-weight: 700; cursor: pointer;
-  letter-spacing: 0.06em; font-family: 'Cinzel', serif;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s;
-}
-.btn-primario:active { opacity: 0.85; }
-
-.btn-deletar {
-  width: 100%; padding: 13px;
-  background: transparent;
-  border: 0.5px solid rgba(224,112,112,0.4);
-  border-radius: 10px; color: var(--vermelho);
-  font-size: 14px; cursor: pointer; margin-top: 4px;
-}
-
-.btn-icone {
-  background: transparent; border: none;
-  color: var(--texto-dim); font-size: 18px; cursor: pointer;
-  padding: 4px;
-}
-
-.erro-msg {
-  color: var(--vermelho); font-size: 13px;
-  text-align: center; width: 100%;
-}
-
-/* ═══ CABEÇALHO ═══ */
-.cabecalho {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px 11px;
-  border-bottom: 0.5px solid var(--borda);
-  background: rgba(10,22,10,0.5);
-  flex-shrink: 0;
-}
-.cabecalho-titulo {
-  font-size: 15px; font-weight: 600;
-  color: var(--dourado); flex: 1; letter-spacing: 0.04em;
-}
-.btn-voltar {
-  width: 32px; height: 32px; border-radius: 50%;
-  border: 0.5px solid var(--borda); background: rgba(255,255,255,0.04);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 16px; color: var(--dourado);
-  flex-shrink: 0; -webkit-tap-highlight-color: transparent;
-}
-
-/* ═══ BADGES ═══ */
-.badge {
-  font-size: 9px; padding: 3px 9px;
-  border-radius: 20px; font-weight: 700; letter-spacing: 0.07em;
-}
-.badge-admin   { background: rgba(201,168,76,0.2); color: var(--dourado); border: 0.5px solid var(--dourado-dim); }
-.badge-consulta{ background: rgba(80,160,80,0.2); color: #8bc88b; border: 0.5px solid rgba(80,160,80,0.5); }
-
-/* ═══ BUSCA ═══ */
-.busca-area { padding: 12px 14px 6px; flex-shrink: 0; }
-.busca-box {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 0.5px solid var(--borda-forte);
-  border-radius: 10px; padding: 11px 13px;
-}
-.busca-icone { font-size: 16px; }
-.busca-input {
-  flex: 1; background: transparent; border: none;
-  font-size: 14px; color: var(--branco);
-  -webkit-appearance: none;
-}
-.busca-input:focus { outline: none; }
-.busca-input::placeholder { color: var(--texto-dim); }
-
-/* Categorias */
-.cats-scroll {
-  display: flex; gap: 6px;
-  padding: 6px 14px 10px;
-  overflow-x: auto; flex-shrink: 0;
-  -webkit-overflow-scrolling: touch;
-}
-.cats-scroll::-webkit-scrollbar { display: none; }
-
-.cat-pill {
-  font-size: 11px; padding: 6px 13px;
-  border-radius: 20px; white-space: nowrap; cursor: pointer;
-  border: 0.5px solid var(--borda); color: var(--texto-dim);
-  background: rgba(255,255,255,0.03);
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.cat-pill.ativa {
-  background: rgba(201,168,76,0.15);
-  color: var(--dourado); border-color: var(--dourado-dim); font-weight: 600;
-}
-
-/* Lista de produtos */
-.produto-lista {
-  flex: 1; padding: 4px 14px 80px;
-  overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.produto-card {
-  background: rgba(255,255,255,0.04); border: 0.5px solid var(--borda);
-  border-radius: 12px; padding: 13px 14px;
-  cursor: pointer; display: flex; align-items: center; gap: 12px;
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.15s;
-}
-.produto-card:active { border-color: var(--dourado-dim); }
-
-.produto-icone {
-  width: 38px; height: 38px; border-radius: 10px;
-  background: rgba(201,168,76,0.1); border: 0.5px solid var(--borda);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
-}
-.produto-info { flex: 1; min-width: 0; }
-.produto-nome {
-  font-size: 13px; font-weight: 600; color: var(--branco);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.produto-cat { font-size: 10px; color: var(--texto-sec); margin-top: 2px; }
-
-.produto-preco { text-align: right; flex-shrink: 0; }
-.preco-label { font-size: 9px; color: var(--texto-dim); letter-spacing: 0.04em; }
-.preco-valor { font-size: 16px; font-weight: 700; color: var(--dourado-light); }
-
-.lista-vazia {
-  text-align: center; color: var(--texto-dim);
-  padding: 3rem 1rem; font-size: 14px; line-height: 1.8;
-}
-
-/* FAB */
-.fab {
-  position: fixed; bottom: 24px; right: 20px;
-  width: 52px; height: 52px; border-radius: 50%;
-  background: linear-gradient(135deg, #c9a84c, #a8842e);
-  color: #1a1200; border: none;
-  font-size: 26px; font-weight: 400;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 10;
-  box-shadow: 0 4px 20px rgba(201,168,76,0.3);
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ═══ DETALHE ═══ */
-.detalhe-corpo {
-  flex: 1; padding: 14px;
-  display: flex; flex-direction: column; gap: 12px;
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
-}
-
-.detalhe-hero {
-  background: rgba(255,255,255,0.04); border: 0.5px solid var(--borda-forte);
-  border-radius: 14px; padding: 20px; text-align: center;
-  position: relative; overflow: hidden;
-}
-.detalhe-hero::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--dourado), transparent);
-}
-.detalhe-icone { font-size: 36px; margin-bottom: 8px; }
-.detalhe-nome  { font-size: 17px; font-weight: 700; color: var(--branco); }
-.detalhe-cat   { font-size: 12px; color: var(--texto-sec); margin-top: 3px; }
-.detalhe-codigo{ font-size: 11px; color: var(--texto-dim); margin-top: 3px; }
-
-.preco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.preco-box {
-  background: rgba(255,255,255,0.04); border: 0.5px solid var(--borda);
-  border-radius: 10px; padding: 13px; text-align: center;
-}
-.preco-box-label { font-size: 9px; color: var(--texto-sec); margin-bottom: 5px; letter-spacing: 0.05em; }
-.preco-box-valor { font-size: 21px; font-weight: 700; }
-.cor-compra { color: var(--vermelho); }
-.cor-venda  { color: var(--dourado-light); }
-
-.margem-box {
-  font-size: 12px; color: var(--texto-sec); text-align: center;
-  padding: 9px 14px; background: rgba(201,168,76,0.06);
-  border: 0.5px solid var(--borda); border-radius: 9px;
-}
-.margem-box strong { color: var(--dourado); }
-
-.meta-bloco { border: 0.5px solid var(--borda); border-radius: 10px; overflow: hidden; }
-.meta-linha {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 13px; border-bottom: 0.5px solid var(--borda);
-}
-.meta-linha:last-child { border: none; }
-.meta-chave { font-size: 12px; color: var(--texto-dim); }
-.meta-valor { font-size: 12px; color: var(--texto-sec); font-weight: 600; }
-
-.btn-editar {
-  width: 100%; padding: 13px;
-  border: 0.5px solid var(--borda-forte); border-radius: 10px;
-  background: rgba(201,168,76,0.1);
-  color: var(--dourado); font-size: 14px; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-
-/* ═══ EDITAR ═══ */
-.editar-corpo {
-  flex: 1; padding: 14px;
-  display: flex; flex-direction: column; gap: 14px;
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
-}
-.preco-linha { display: flex; gap: 10px; }
-
-/* ═══ TOAST ═══ */
-.toast {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  background: rgba(201,168,76,0.95); color: #1a1200;
-  padding: 10px 20px; border-radius: 20px;
-  font-size: 13px; font-weight: 600;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.3s; z-index: 100;
-  white-space: nowrap;
-}
-.toast.visivel { opacity: 1; }
-
-/* ═══ LOADING ═══ */
-.loading {
-  display: flex; align-items: center; justify-content: center;
-  padding: 2rem; color: var(--texto-dim); font-size: 14px;
-}
-
-/* ═══ ORDENAÇÃO ═══ */
-.ord-row {
-  display: flex; gap: 6px; padding: 0 14px 8px;
-}
-.ord-btn {
-  flex: 1; padding: 7px 10px;
-  border: 0.5px solid var(--borda); border-radius: 8px;
-  background: rgba(255,255,255,0.03);
-  color: var(--texto-dim); font-size: 12px; font-weight: 500;
-  cursor: pointer; text-align: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s;
-}
-.ord-btn.ativo {
-  background: rgba(201,168,76,0.15);
-  color: var(--dourado); border-color: var(--dourado-dim);
-  font-weight: 700;
-}
+  // Contagem por categoria
+  async getContagemCategorias() {
+    const data = await this.request('produtos?select=categoria');
+    const contagem = {};
+    (data || []).forEach(p => {
+      contagem[p.categoria] = (contagem[p.categoria] || 0) + 1;
+    });
+    return contagem;
+  }
+};
