@@ -1,34 +1,41 @@
 // Service Worker — KG Agropet PWA
-const CACHE = 'kg-agropet-v1';
-const ARQUIVOS = [
-  '/', '/index.html', '/css/style.css',
-  '/js/supabase.js', '/js/app.js', '/manifest.json'
-];
+// IMPORTANTE: incrementar versão a cada atualização para forçar refresh
+const CACHE = 'kg-agropet-v3';
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ARQUIVOS))
-  );
+  // Pula direto para ativar, sem esperar
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.map(k => caches.delete(k)))  // Limpa TODOS os caches antigos
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
+// Estratégia: SEMPRE buscar online, cache só como fallback offline
 self.addEventListener('fetch', e => {
-  // Requisições ao Supabase: sempre online, sem cache
+  // Requisições ao Supabase: sempre online
   if (e.request.url.includes('supabase.co')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('offline', { status: 503 })));
+    e.respondWith(
+      fetch(e.request).catch(() => new Response('offline', { status: 503 }))
+    );
     return;
   }
-  // App shell: cache primeiro
+
+  // App shell: network-first com fallback para cache
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(response => {
+        // Salva no cache para uso offline futuro
+        const responseClone = response.clone();
+        caches.open(CACHE).then(cache => {
+          cache.put(e.request, responseClone);
+        });
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
