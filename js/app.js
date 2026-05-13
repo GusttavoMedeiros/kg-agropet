@@ -325,6 +325,7 @@ async function carregarMaisProdutos() {
       busca,
       offset: estado.pagina * POR_PAGINA,
       limit: POR_PAGINA,
+      ordenacao: estado.ordenacao,
     };
     const novos = await supabase.getProdutos(filtros);
     if (!novos || novos.length < POR_PAGINA) estado.temMais = false;
