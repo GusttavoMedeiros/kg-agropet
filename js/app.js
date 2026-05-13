@@ -291,6 +291,7 @@ function montarCategorias() {
       : (estado.contagemCats[c] || 0);
     const label = num > 0 ? `${c} <span class="cat-num">(${num})</span>` : c;
     return `<button class="cat-pill ${c === estado.categoriaAtiva ? 'ativa' : ''}"
+      data-cat="${c}"
       onclick="selecionarCategoria('${c}')">${label}</button>`;
   }).join('');
 }
@@ -298,7 +299,7 @@ function montarCategorias() {
 function selecionarCategoria(cat) {
   estado.categoriaAtiva = cat;
   document.querySelectorAll('.cat-pill').forEach(p => {
-    p.classList.toggle('ativa', p.textContent.startsWith(cat));
+    p.classList.toggle('ativa', p.dataset.cat === cat);
   });
   resetarECarregar();
 }
