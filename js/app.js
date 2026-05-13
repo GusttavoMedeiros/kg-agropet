@@ -2,13 +2,13 @@
 //  KG AGROPET — APP PRINCIPAL
 // ═══════════════════════════════════════════════
 
-// Estado global
 let estado = {
   usuario: null,
-  tipo: 'admin',         // 'admin' ou 'consulta'
+  tipo: 'admin',
   produtos: [],
   categoriaAtiva: 'Todos',
   produtoAtual: null,
+  ordenacao: 'az', // 'az' ou 'codigo'
 };
 
 const CATEGORIAS = [
@@ -59,6 +59,29 @@ function calcularMargem(compra, venda) {
   return (((venda - compra) / compra) * 100).toFixed(1);
 }
 
+// ─── ORDENAÇÃO ─────────────────────────────────
+
+function ordenarProdutos(produtos) {
+  if (estado.ordenacao === 'codigo') {
+    return [...produtos].sort((a, b) => {
+      const ca = (a.codigo || '').replace(/\D/g, '').padStart(10, '0');
+      const cb = (b.codigo || '').replace(/\D/g, '').padStart(10, '0');
+      return ca.localeCompare(cb);
+    });
+  }
+  // az
+  return [...produtos].sort((a, b) =>
+    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+  );
+}
+
+function alternarOrdenacao(nova) {
+  estado.ordenacao = nova;
+  document.getElementById('btn-ord-az').classList.toggle('ativo', nova === 'az');
+  document.getElementById('btn-ord-cod').classList.toggle('ativo', nova === 'codigo');
+  renderizarProdutos(estado.produtos);
+}
+
 // ─── LOGIN ─────────────────────────────────────
 
 function selecionarTipo(tipo) {
@@ -90,7 +113,6 @@ async function fazerLogin() {
       erro.style.display = 'block';
       return;
     }
-    // Verificar se o tipo bate com o cadastro
     if (user.tipo !== estado.tipo) {
       erro.textContent = `Este usuário é do tipo "${user.tipo === 'admin' ? 'Administrador' : 'Consulta'}".`;
       erro.style.display = 'block';
@@ -119,19 +141,14 @@ function fazerLogout() {
 // ─── TELA BUSCA ────────────────────────────────
 
 async function carregarTelaBusca() {
-  // Badge
   const badge = document.getElementById('badge-busca');
   badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
   badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
 
-  // FAB só para admin
   document.getElementById('fab-add').style.display =
     estado.tipo === 'admin' ? 'flex' : 'none';
 
-  // Montar categorias
   montarCategorias();
-
-  // Ir para tela e carregar produtos
   irPara('tela-busca');
   await carregarProdutos();
 }
@@ -174,7 +191,8 @@ function renderizarProdutos(produtos) {
     lista.innerHTML = '<div class="lista-vazia">Nenhum produto encontrado.<br>Use o + para cadastrar.</div>';
     return;
   }
-  lista.innerHTML = produtos.map(p => `
+  const ordenados = ordenarProdutos(produtos);
+  lista.innerHTML = ordenados.map(p => `
     <div class="produto-card" onclick="abrirDetalhe('${p.id}')" role="listitem">
       <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
       <div class="produto-info">
@@ -201,7 +219,6 @@ async function abrirDetalhe(id) {
   const corpo = document.getElementById('detalhe-corpo');
   corpo.innerHTML = '<div class="loading">Carregando...</div>';
 
-  // Badge
   const badge = document.getElementById('badge-detalhe');
   badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
   badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
@@ -222,7 +239,6 @@ async function abrirDetalhe(id) {
         <div class="detalhe-cat">${p.categoria}</div>
         <div class="detalhe-codigo">Código: ${p.codigo || '—'}</div>
       </div>
-
       <div class="preco-grid">
         <div class="preco-box">
           <div class="preco-box-label">PREÇO DE COMPRA</div>
@@ -233,12 +249,10 @@ async function abrirDetalhe(id) {
           <div class="preco-box-valor cor-venda">${formatarMoeda(p.preco_venda)}</div>
         </div>
       </div>
-
       <div class="margem-box">
         Margem: <strong>${margem}%</strong> &nbsp;·&nbsp;
         Lucro: <strong>${formatarMoeda(lucro)}</strong> / unidade
       </div>
-
       <div class="meta-bloco">
         <div class="meta-linha">
           <span class="meta-chave">Categoria</span>
@@ -253,7 +267,6 @@ async function abrirDetalhe(id) {
           <span class="meta-valor">${p.atualizado_por || '—'}</span>
         </div>
       </div>
-
       ${isAdmin ? `
         <button class="btn-editar" onclick="abrirEdicao('${p.id}')">
           ✏️ Editar preços
@@ -372,7 +385,22 @@ async function deletarProduto() {
   }
 }
 
-// ─── SERVICE WORKER (PWA offline) ──────────────
+// ─── INICIALIZAÇÃO ─────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Enter nos campos de login faz login
+  document.getElementById('inp-usuario').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('inp-senha').focus();
+  });
+  document.getElementById('inp-senha').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fazerLogin();
+  });
+
+  // Botões de ordenação — estado inicial
+  document.getElementById('btn-ord-az').classList.add('ativo');
+});
+
+// ─── SERVICE WORKER ────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(console.error);
