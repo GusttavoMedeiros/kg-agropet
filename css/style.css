@@ -388,13 +388,13 @@ html, body {
 
 /* ═══ ORDENAÇÃO — Estilo premium ═══ */
 .ord-row {
-  display: flex; gap: 8px; padding: 8px 14px 10px;
+  display: flex; gap: 6px; padding: 8px 14px 10px;
 }
 .ord-btn {
   flex: 1; padding: 9px 12px;
   border: 0.5px solid var(--borda); border-radius: 10px;
   background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-  color: var(--texto-dim); font-size: 12px; font-weight: 600;
+  color: var(--texto-dim); font-size: 11px; font-weight: 600;
   cursor: pointer; text-align: center;
   letter-spacing: 0.05em;
   -webkit-tap-highlight-color: transparent;
