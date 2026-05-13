@@ -386,24 +386,43 @@ html, body {
   padding: 2rem; color: var(--texto-dim); font-size: 14px;
 }
 
-/* ═══ ORDENAÇÃO ═══ */
+/* ═══ ORDENAÇÃO — Estilo premium ═══ */
 .ord-row {
-  display: flex; gap: 6px; padding: 0 14px 8px;
+  display: flex; gap: 8px; padding: 8px 14px 10px;
 }
 .ord-btn {
-  flex: 1; padding: 7px 10px;
-  border: 0.5px solid var(--borda); border-radius: 8px;
-  background: rgba(255,255,255,0.03);
-  color: var(--texto-dim); font-size: 12px; font-weight: 500;
+  flex: 1; padding: 9px 12px;
+  border: 0.5px solid var(--borda); border-radius: 10px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  color: var(--texto-dim); font-size: 12px; font-weight: 600;
   cursor: pointer; text-align: center;
+  letter-spacing: 0.05em;
   -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  position: relative; overflow: hidden;
 }
+.ord-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,0.12), transparent 60%);
+  opacity: 0; transition: opacity 0.2s;
+}
+.ord-btn:active::before { opacity: 1; }
 .ord-btn.ativo {
-  background: rgba(201,168,76,0.15);
-  color: var(--dourado); border-color: var(--dourado-dim);
+  background: linear-gradient(145deg, rgba(201,168,76,0.22), rgba(201,168,76,0.10));
+  color: var(--dourado-light);
+  border-color: var(--dourado-dim);
   font-weight: 700;
+  box-shadow: 0 0 0 0.5px rgba(201,168,76,0.4), inset 0 0 8px rgba(201,168,76,0.06);
 }
+.ord-btn.ativo::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--dourado-light), transparent);
+}
+.ord-btn .ord-icon {
+  font-size: 13px; opacity: 0.8;
+}
+.ord-btn.ativo .ord-icon { opacity: 1; }
 
 /* ═══ PAGINAÇÃO ═══ */
 .loading-mais {
