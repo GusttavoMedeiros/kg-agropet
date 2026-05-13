@@ -343,6 +343,18 @@ async function carregarMaisProdutos() {
   }
 }
 
+
+// ─── INDICADOR DE MARGEM ───────────────────────
+
+function indicadorMargem(compra, venda) {
+  if (!compra || compra === 0) return { cor: 'margem-nd', label: '—' };
+  const pct = ((venda - compra) / compra) * 100;
+  if (pct >= 40)  return { cor: 'margem-alta',  label: `${pct.toFixed(0)}%` };
+  if (pct >= 20)  return { cor: 'margem-media', label: `${pct.toFixed(0)}%` };
+  if (pct >= 0)   return { cor: 'margem-baixa', label: `${pct.toFixed(0)}%` };
+  return { cor: 'margem-negativa', label: `${pct.toFixed(0)}%` };
+}
+
 function renderizarProdutos(produtos, manterScroll = false) {
   const lista = document.getElementById('produto-lista');
   const scrollAntes = lista.scrollTop;
@@ -357,7 +369,9 @@ function renderizarProdutos(produtos, manterScroll = false) {
     ? `<div class="loading-mais" id="sentinel">Carregando mais...</div>`
     : `<div class="fim-lista">✓ ${produtos.length} produto${produtos.length !== 1 ? 's' : ''} carregado${produtos.length !== 1 ? 's' : ''}</div>`;
 
-  lista.innerHTML = ordenados.map(p => `
+  lista.innerHTML = ordenados.map(p => {
+    const mg = indicadorMargem(p.preco_compra, p.preco_venda);
+    return `
     <div class="produto-card" onclick="abrirDetalhe('${p.id}')" role="listitem">
       <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
       <div class="produto-info">
@@ -367,9 +381,10 @@ function renderizarProdutos(produtos, manterScroll = false) {
       <div class="produto-preco">
         <div class="preco-label">VENDA</div>
         <div class="preco-valor">${formatarMoeda(p.preco_venda)}</div>
+        <div class="margem-pill ${mg.cor}">${mg.label}</div>
       </div>
     </div>
-  `).join('') + rodape;
+  `}).join('') + rodape;
 
   if (manterScroll) lista.scrollTop = scrollAntes;
 
