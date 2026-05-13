@@ -31,7 +31,8 @@ const supabase = {
   async getProdutos(filtros = {}) {
     const limit  = filtros.limit  || 50;
     const offset = filtros.offset || 0;
-    let query = `produtos?select=*&limit=${limit}&offset=${offset}`;
+    const ordem = filtros.ordenacao === 'codigo' ? 'codigo.asc' : 'nome.asc';
+    let query = `produtos?select=*&limit=${limit}&offset=${offset}&order=${ordem}`;
     if (filtros.categoria && filtros.categoria !== 'Todos') {
       query += `&categoria=eq.${encodeURIComponent(filtros.categoria)}`;
     }
