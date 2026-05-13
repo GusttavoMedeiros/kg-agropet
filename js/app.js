@@ -1,406 +1,617 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+// ═══════════════════════════════════════════════
+//  KG AGROPET — APP PRINCIPAL
+// ═══════════════════════════════════════════════
 
-/* ═══ RESET & BASE ═══ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+let estado = {
+  usuario: null,
+  tipo: 'admin',
+  produtos: [],
+  categoriaAtiva: 'Todos',
+  produtoAtual: null,
+  ordenacao: 'az',
+  pagina: 0,
+  carregandoMais: false,
+  temMais: true,
+  contagemCats: {},
+};
 
-:root {
-  --verde:         #1a2e1a;
-  --verde2:        #223322;
-  --verde3:        #2a3f2a;
-  --dourado:       #c9a84c;
-  --dourado-light: #e8c96a;
-  --dourado-dim:   #7a6230;
-  --laranja:       #c94f1a;
-  --branco:        #f5f0e8;
-  --texto-sec:     #c9b87a;
-  --texto-dim:     #8a7a5a;
-  --borda:         rgba(201,168,76,0.35);
-  --borda-forte:   rgba(201,168,76,0.70);
-  --vermelho:      #e07070;
-}
+const POR_PAGINA = 50;
+const MAX_RECENTES = 5;
 
-html, body {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--verde);
-  color: var(--branco);
-  overflow: hidden;
-}
+const CATEGORIAS = [
+  'Ração', 'Veterinário', 'Sementes', 'Defensivos',
+  'Pet', 'Higiene Animal', 'Acessórios', 'Outros'
+];
 
-/* ═══ TELAS ═══ */
-.tela {
-  display: none;
-  flex-direction: column;
-  height: 100vh;
-  width: 100%;
-  position: fixed;
-  top: 0; left: 0;
-  background: var(--verde);
-  overflow: hidden;
-}
-.tela.ativa { display: flex; }
+const ICONES_CAT = {
+  'Ração':          '🐾',
+  'Veterinário':    '💉',
+  'Sementes':       '🌱',
+  'Defensivos':     '💧',
+  'Pet':            '🐶',
+  'Higiene Animal': '🧴',
+  'Acessórios':     '🔧',
+  'Outros':         '📦',
+};
 
-/* Textura de fundo sutil */
-.tela::before {
-  content: '';
-  position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(ellipse at 80% 15%, rgba(201,168,76,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse at 15% 85%, rgba(201,168,76,0.05) 0%, transparent 45%);
-}
-.tela > * { position: relative; z-index: 1; }
+// ─── UTILIDADES ────────────────────────────────
 
-/* ═══ LOGIN ═══ */
-.bg-deco {
-  position: absolute; bottom: 30px; left: 0; right: 0;
-  display: flex; justify-content: center; gap: 2rem;
-  font-size: 3.5rem; opacity: 0.05; pointer-events: none;
-  z-index: 0;
+function irPara(telaId) {
+  document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+  document.getElementById(telaId).classList.add('ativa');
 }
 
-.login-wrap {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 1rem;
-  padding: 2rem 1.5rem 2rem;
-  height: 100%; overflow-y: auto;
-  position: relative; z-index: 1;
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visivel');
+  setTimeout(() => t.classList.remove('visivel'), 2500);
 }
 
-.logo-block {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 6px;
-  margin-bottom: 0.25rem; margin-top: 0.5rem;
+function formatarMoeda(val) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'BRL'
+  }).format(val || 0);
 }
 
-.logo-symbol {
-  width: 76px; height: 76px; border-radius: 20px;
-  background: linear-gradient(145deg, rgba(201,168,76,0.15), rgba(201,168,76,0.04));
-  border: 2px solid var(--dourado-dim);
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-  box-shadow: 0 0 0 1px rgba(201,168,76,0.12), inset 0 0 16px rgba(201,168,76,0.06);
-}
-.logo-symbol::before {
-  content: '';
-  position: absolute; inset: 4px; border-radius: 16px;
-  border: 0.5px solid rgba(201,168,76,0.25);
-  pointer-events: none;
-}
-.logo-symbol::after {
-  content: '';
-  position: absolute; inset: 0; border-radius: 20px;
-  background: linear-gradient(135deg, rgba(201,168,76,0.08) 0%, transparent 60%);
-  pointer-events: none;
+function formatarData(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('pt-BR') + ' · ' +
+    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-.logo-nome {
-  font-family: 'Cinzel', serif;
-  font-size: 20px; font-weight: 700;
-  color: var(--dourado); letter-spacing: 0.14em;
-  margin-top: 4px;
+function calcularMargem(compra, venda) {
+  if (!compra || compra === 0) return 0;
+  return (((venda - compra) / compra) * 100).toFixed(1);
 }
 
-.logo-tag {
-  font-size: 9px; font-weight: 500;
-  color: var(--texto-sec); letter-spacing: 0.20em;
-  text-transform: uppercase;
+// ─── RECENTES (localStorage) ───────────────────
+
+function salvarRecente(produto) {
+  try {
+    let recentes = JSON.parse(localStorage.getItem('kg_recentes') || '[]');
+    recentes = recentes.filter(r => r.id !== produto.id);
+    recentes.unshift({
+      id: produto.id,
+      nome: produto.nome,
+      categoria: produto.categoria,
+      codigo: produto.codigo,
+      preco_venda: produto.preco_venda,
+      visto_em: new Date().toISOString(),
+    });
+    recentes = recentes.slice(0, MAX_RECENTES);
+    localStorage.setItem('kg_recentes', JSON.stringify(recentes));
+  } catch(e) {}
 }
 
-.gold-line {
-  width: 100%; height: 0.5px;
-  background: linear-gradient(90deg, transparent, var(--dourado-dim), transparent);
+function getRecentes() {
+  try {
+    return JSON.parse(localStorage.getItem('kg_recentes') || '[]');
+  } catch(e) { return []; }
 }
 
-/* ═══ CAMPOS ═══ */
-.campo-grupo { width: 100%; display: flex; flex-direction: column; gap: 6px; }
-.campo-label {
-  font-size: 11px; color: var(--texto-sec);
-  letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
-}
-.campo-label-compra { color: var(--vermelho); }
-.campo-label-venda  { color: var(--dourado-light); }
+// ─── ORDENAÇÃO ─────────────────────────────────
 
-.campo-input {
-  width: 100%; padding: 13px 14px;
-  border: 0.5px solid var(--borda); border-radius: 10px;
-  font-size: 15px; color: var(--branco);
-  background: rgba(255,255,255,0.05);
-  -webkit-appearance: none;
-}
-.campo-input:focus { outline: none; border-color: var(--dourado-dim); background: rgba(255,255,255,0.08); }
-.campo-input::placeholder { color: var(--texto-dim); }
-
-.campo-select {
-  width: 100%; padding: 13px 14px;
-  border: 0.5px solid var(--borda); border-radius: 10px;
-  font-size: 15px; color: var(--branco);
-  background: rgba(30,50,30,0.9);
-  -webkit-appearance: none; appearance: none;
-}
-.campo-select:focus { outline: none; border-color: var(--dourado-dim); }
-
-/* Tipo de usuário */
-.tipo-row { display: flex; gap: 8px; width: 100%; }
-.tipo-btn {
-  flex: 1; padding: 11px 6px;
-  border: 0.5px solid var(--borda); border-radius: 10px;
-  font-size: 13px; cursor: pointer;
-  background: rgba(255,255,255,0.03);
-  color: var(--texto-dim); text-align: center;
-  transition: all 0.15s;
-}
-.tipo-btn.ativo {
-  border-color: var(--dourado-dim);
-  background: rgba(201,168,76,0.14);
-  color: var(--dourado); font-weight: 600;
+function ordenarProdutos(produtos) {
+  if (estado.ordenacao === 'codigo') {
+    return [...produtos].sort((a, b) => {
+      const ca = (a.codigo || '').replace(/\D/g, '').padStart(10, '0');
+      const cb = (b.codigo || '').replace(/\D/g, '').padStart(10, '0');
+      return ca.localeCompare(cb);
+    });
+  }
+  return [...produtos].sort((a, b) =>
+    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+  );
 }
 
-/* ═══ BOTÕES ═══ */
-.btn-primario {
-  width: 100%; padding: 14px;
-  background: linear-gradient(135deg, #c9a84c, #a8842e);
-  color: #1a1200; border: none; border-radius: 10px;
-  font-size: 15px; font-weight: 700; cursor: pointer;
-  letter-spacing: 0.06em; font-family: 'Cinzel', serif;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s;
-}
-.btn-primario:active { opacity: 0.85; }
-
-.btn-deletar {
-  width: 100%; padding: 13px;
-  background: transparent;
-  border: 0.5px solid rgba(224,112,112,0.4);
-  border-radius: 10px; color: var(--vermelho);
-  font-size: 14px; cursor: pointer; margin-top: 4px;
+function alternarOrdenacao(nova) {
+  estado.ordenacao = nova;
+  document.getElementById('btn-ord-az').classList.toggle('ativo', nova === 'az');
+  document.getElementById('btn-ord-cod').classList.toggle('ativo', nova === 'codigo');
+  renderizarProdutos(estado.produtos, false);
 }
 
-.btn-icone {
-  background: transparent; border: none;
-  color: var(--texto-dim); font-size: 18px; cursor: pointer;
-  padding: 4px;
+// ─── LOGIN ─────────────────────────────────────
+
+function selecionarTipo(tipo) {
+  estado.tipo = tipo;
+  document.getElementById('btn-admin').classList.toggle('ativo', tipo === 'admin');
+  document.getElementById('btn-consulta').classList.toggle('ativo', tipo === 'consulta');
 }
 
-.erro-msg {
-  color: var(--vermelho); font-size: 13px;
-  text-align: center; width: 100%;
+async function fazerLogin() {
+  const usuario = document.getElementById('inp-usuario').value.trim();
+  const senha   = document.getElementById('inp-senha').value.trim();
+  const erro    = document.getElementById('login-erro');
+
+  if (!usuario || !senha) {
+    erro.textContent = 'Preencha usuário e senha.';
+    erro.style.display = 'block';
+    return;
+  }
+
+  erro.style.display = 'none';
+  const btn = document.querySelector('#tela-login .btn-primario');
+  btn.textContent = 'Verificando...';
+  btn.disabled = true;
+
+  try {
+    const user = await supabase.getUsuario(usuario, senha);
+    if (!user) {
+      erro.textContent = 'Usuário ou senha incorretos.';
+      erro.style.display = 'block';
+      return;
+    }
+    if (user.tipo !== estado.tipo) {
+      erro.textContent = `Este usuário é do tipo "${user.tipo === 'admin' ? 'Administrador' : 'Consulta'}".`;
+      erro.style.display = 'block';
+      return;
+    }
+    estado.usuario = user;
+    await carregarTelaInicio();
+  } catch (e) {
+    erro.textContent = 'Erro de conexão. Verifique sua internet.';
+    erro.style.display = 'block';
+    console.error(e);
+  } finally {
+    btn.textContent = 'ENTRAR';
+    btn.disabled = false;
+  }
 }
 
-/* ═══ CABEÇALHO ═══ */
-.cabecalho {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px 11px;
-  border-bottom: 0.5px solid var(--borda);
-  background: rgba(10,22,10,0.5);
-  flex-shrink: 0;
-}
-.cabecalho-titulo {
-  font-size: 15px; font-weight: 600;
-  color: var(--dourado); flex: 1; letter-spacing: 0.04em;
-}
-.btn-voltar {
-  width: 32px; height: 32px; border-radius: 50%;
-  border: 0.5px solid var(--borda); background: rgba(255,255,255,0.04);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 16px; color: var(--dourado);
-  flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+function confirmarLogout() {
+  const modal = document.getElementById('modal-logout');
+  modal.style.display = 'flex';
 }
 
-/* ═══ BADGES ═══ */
-.badge {
-  font-size: 9px; padding: 3px 9px;
-  border-radius: 20px; font-weight: 700; letter-spacing: 0.07em;
-}
-.badge-admin   { background: rgba(201,168,76,0.2); color: var(--dourado); border: 0.5px solid var(--dourado-dim); }
-.badge-consulta{ background: rgba(80,160,80,0.2); color: #8bc88b; border: 0.5px solid rgba(80,160,80,0.5); }
-
-/* ═══ BUSCA ═══ */
-.busca-area { padding: 12px 14px 6px; flex-shrink: 0; }
-.busca-box {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 0.5px solid var(--borda-forte);
-  border-radius: 10px; padding: 11px 13px;
-}
-.busca-icone { font-size: 16px; }
-.busca-input {
-  flex: 1; background: transparent; border: none;
-  font-size: 14px; color: var(--branco);
-  -webkit-appearance: none;
-}
-.busca-input:focus { outline: none; }
-.busca-input::placeholder { color: var(--texto-dim); }
-
-/* Categorias */
-.cats-scroll {
-  display: flex; gap: 6px;
-  padding: 6px 14px 10px;
-  overflow-x: auto; flex-shrink: 0;
-  -webkit-overflow-scrolling: touch;
-}
-.cats-scroll::-webkit-scrollbar { display: none; }
-
-.cat-pill {
-  font-size: 11px; padding: 6px 13px;
-  border-radius: 20px; white-space: nowrap; cursor: pointer;
-  border: 0.5px solid var(--borda); color: var(--texto-dim);
-  background: rgba(255,255,255,0.03);
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.cat-pill.ativa {
-  background: rgba(201,168,76,0.15);
-  color: var(--dourado); border-color: var(--dourado-dim); font-weight: 600;
+function cancelarLogout() {
+  document.getElementById('modal-logout').style.display = 'none';
 }
 
-/* Lista de produtos */
-.produto-lista {
-  flex: 1; padding: 4px 14px 80px;
-  overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-  -webkit-overflow-scrolling: touch;
+function fazerLogout() {
+  document.getElementById('modal-logout').style.display = 'none';
+  estado.usuario = null;
+  estado.produtos = [];
+  document.getElementById('inp-usuario').value = '';
+  document.getElementById('inp-senha').value = '';
+  irPara('tela-login');
 }
 
-.produto-card {
-  background: rgba(255,255,255,0.04); border: 0.5px solid var(--borda);
-  border-radius: 12px; padding: 13px 14px;
-  cursor: pointer; display: flex; align-items: center; gap: 12px;
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.15s;
-}
-.produto-card:active { border-color: var(--dourado-dim); }
+// ─── TELA INÍCIO RÁPIDO ────────────────────────
 
-.produto-icone {
-  width: 38px; height: 38px; border-radius: 10px;
-  background: rgba(201,168,76,0.1); border: 0.5px solid var(--borda);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
-}
-.produto-info { flex: 1; min-width: 0; }
-.produto-nome {
-  font-size: 13px; font-weight: 600; color: var(--branco);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.produto-cat { font-size: 10px; color: var(--texto-sec); margin-top: 2px; }
+async function carregarTelaInicio() {
+  // Badge
+  const badge = document.getElementById('badge-inicio');
+  badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
+  badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
 
-.produto-preco { text-align: right; flex-shrink: 0; }
-.preco-label { font-size: 9px; color: var(--texto-dim); letter-spacing: 0.04em; }
-.preco-valor { font-size: 16px; font-weight: 700; color: var(--dourado-light); }
+  // FAB
+  document.getElementById('fab-inicio').style.display =
+    estado.tipo === 'admin' ? 'flex' : 'none';
 
-.lista-vazia {
-  text-align: center; color: var(--texto-dim);
-  padding: 3rem 1rem; font-size: 14px; line-height: 1.8;
+  irPara('tela-inicio');
+  renderizarInicio();
+
+  // Buscar contagem por categoria em paralelo
+  supabase.getContagemCategorias().then(contagem => {
+    estado.contagemCats = contagem;
+    renderizarInicio();
+  }).catch(() => {});
 }
 
-/* FAB */
-.fab {
-  position: fixed; bottom: 24px; right: 20px;
-  width: 52px; height: 52px; border-radius: 50%;
-  background: linear-gradient(135deg, #c9a84c, #a8842e);
-  color: #1a1200; border: none;
-  font-size: 26px; font-weight: 400;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 10;
-  box-shadow: 0 4px 20px rgba(201,168,76,0.3);
-  -webkit-tap-highlight-color: transparent;
+function renderizarInicio() {
+  const recentes = getRecentes();
+  const cont = document.getElementById('inicio-corpo');
+
+  const saudacao = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
+
+  const blocoRecentes = recentes.length > 0 ? `
+    <div class="inicio-secao">
+      <div class="inicio-secao-titulo">🕐 Vistos recentemente</div>
+      ${recentes.map(p => `
+        <div class="produto-card" onclick="abrirDetalhe('${p.id}')">
+          <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
+          <div class="produto-info">
+            <div class="produto-nome">${p.nome}</div>
+            <div class="produto-cat">${p.categoria} · ${p.codigo || '—'}</div>
+          </div>
+          <div class="produto-preco">
+            <div class="preco-label">VENDA</div>
+            <div class="preco-valor">${formatarMoeda(p.preco_venda)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  const totalGeral = Object.values(estado.contagemCats).reduce((a, b) => a + b, 0);
+
+  const blocoCats = `
+    <div class="inicio-secao">
+      <div class="inicio-secao-titulo">📦 Produtos por categoria</div>
+      <div class="cat-grid">
+        <div class="cat-card cat-card-total" onclick="irParaBusca('Todos')">
+          <div class="cat-card-icone">🏪</div>
+          <div class="cat-card-nome">Todos</div>
+          <div class="cat-card-num">${totalGeral || '—'}</div>
+        </div>
+        ${CATEGORIAS.map(c => `
+          <div class="cat-card" onclick="irParaBusca('${c}')">
+            <div class="cat-card-icone">${ICONES_CAT[c]}</div>
+            <div class="cat-card-nome">${c}</div>
+            <div class="cat-card-num">${estado.contagemCats[c] || 0}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  cont.innerHTML = `
+    <div class="inicio-saudacao">
+      ${saudacao()}, <strong>${estado.usuario?.usuario || 'usuário'}</strong>! 🌿
+    </div>
+    ${blocoRecentes}
+    ${blocoCats}
+  `;
 }
 
-/* ═══ DETALHE ═══ */
-.detalhe-corpo {
-  flex: 1; padding: 14px;
-  display: flex; flex-direction: column; gap: 12px;
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
+function irParaBusca(categoria) {
+  estado.categoriaAtiva = categoria;
+  carregarTelaBusca();
 }
 
-.detalhe-hero {
-  background: rgba(255,255,255,0.04); border: 0.5px solid var(--borda-forte);
-  border-radius: 14px; padding: 20px; text-align: center;
-  position: relative; overflow: hidden;
-}
-.detalhe-hero::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--dourado), transparent);
-}
-.detalhe-icone { font-size: 36px; margin-bottom: 8px; }
-.detalhe-nome  { font-size: 17px; font-weight: 700; color: var(--branco); }
-.detalhe-cat   { font-size: 12px; color: var(--texto-sec); margin-top: 3px; }
-.detalhe-codigo{ font-size: 11px; color: var(--texto-dim); margin-top: 3px; }
+// ─── TELA BUSCA ────────────────────────────────
 
-.preco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.preco-box {
-  background: rgba(255,255,255,0.04); border: 0.5px solid var(--borda);
-  border-radius: 10px; padding: 13px; text-align: center;
-}
-.preco-box-label { font-size: 9px; color: var(--texto-sec); margin-bottom: 5px; letter-spacing: 0.05em; }
-.preco-box-valor { font-size: 21px; font-weight: 700; }
-.cor-compra { color: var(--vermelho); }
-.cor-venda  { color: var(--dourado-light); }
+async function carregarTelaBusca() {
+  const badge = document.getElementById('badge-busca');
+  badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
+  badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
 
-.margem-box {
-  font-size: 12px; color: var(--texto-sec); text-align: center;
-  padding: 9px 14px; background: rgba(201,168,76,0.06);
-  border: 0.5px solid var(--borda); border-radius: 9px;
-}
-.margem-box strong { color: var(--dourado); }
+  document.getElementById('fab-add').style.display =
+    estado.tipo === 'admin' ? 'flex' : 'none';
 
-.meta-bloco { border: 0.5px solid var(--borda); border-radius: 10px; overflow: hidden; }
-.meta-linha {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 13px; border-bottom: 0.5px solid var(--borda);
-}
-.meta-linha:last-child { border: none; }
-.meta-chave { font-size: 12px; color: var(--texto-dim); }
-.meta-valor { font-size: 12px; color: var(--texto-sec); font-weight: 600; }
-
-.btn-editar {
-  width: 100%; padding: 13px;
-  border: 0.5px solid var(--borda-forte); border-radius: 10px;
-  background: rgba(201,168,76,0.1);
-  color: var(--dourado); font-size: 14px; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  montarCategorias();
+  irPara('tela-busca');
+  await resetarECarregar();
 }
 
-/* ═══ EDITAR ═══ */
-.editar-corpo {
-  flex: 1; padding: 14px;
-  display: flex; flex-direction: column; gap: 14px;
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
-}
-.preco-linha { display: flex; gap: 10px; }
-
-/* ═══ TOAST ═══ */
-.toast {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  background: rgba(201,168,76,0.95); color: #1a1200;
-  padding: 10px 20px; border-radius: 20px;
-  font-size: 13px; font-weight: 600;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.3s; z-index: 100;
-  white-space: nowrap;
-}
-.toast.visivel { opacity: 1; }
-
-/* ═══ LOADING ═══ */
-.loading {
-  display: flex; align-items: center; justify-content: center;
-  padding: 2rem; color: var(--texto-dim); font-size: 14px;
+function montarCategorias() {
+  const cont = document.getElementById('cats-lista');
+  const cats = ['Todos', ...CATEGORIAS];
+  cont.innerHTML = cats.map(c => {
+    const num = c === 'Todos'
+      ? Object.values(estado.contagemCats).reduce((a, b) => a + b, 0)
+      : (estado.contagemCats[c] || 0);
+    const label = num > 0 ? `${c} <span class="cat-num">(${num})</span>` : c;
+    return `<button class="cat-pill ${c === estado.categoriaAtiva ? 'ativa' : ''}"
+      onclick="selecionarCategoria('${c}')">${label}</button>`;
+  }).join('');
 }
 
-/* ═══ ORDENAÇÃO ═══ */
-.ord-row {
-  display: flex; gap: 6px; padding: 0 14px 8px;
+function selecionarCategoria(cat) {
+  estado.categoriaAtiva = cat;
+  document.querySelectorAll('.cat-pill').forEach(p => {
+    p.classList.toggle('ativa', p.textContent.startsWith(cat));
+  });
+  resetarECarregar();
 }
-.ord-btn {
-  flex: 1; padding: 7px 10px;
-  border: 0.5px solid var(--borda); border-radius: 8px;
-  background: rgba(255,255,255,0.03);
-  color: var(--texto-dim); font-size: 12px; font-weight: 500;
-  cursor: pointer; text-align: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s;
+
+async function resetarECarregar() {
+  estado.pagina = 0;
+  estado.produtos = [];
+  estado.temMais = true;
+  estado.carregandoMais = false;
+  const lista = document.getElementById('produto-lista');
+  lista.innerHTML = '<div class="loading">Carregando...</div>';
+  await carregarMaisProdutos();
 }
-.ord-btn.ativo {
-  background: rgba(201,168,76,0.15);
-  color: var(--dourado); border-color: var(--dourado-dim);
-  font-weight: 700;
+
+async function carregarMaisProdutos() {
+  if (estado.carregandoMais || !estado.temMais) return;
+  estado.carregandoMais = true;
+
+  try {
+    const busca = document.getElementById('inp-busca').value.trim();
+    const filtros = {
+      categoria: estado.categoriaAtiva,
+      busca,
+      offset: estado.pagina * POR_PAGINA,
+      limit: POR_PAGINA,
+    };
+    const novos = await supabase.getProdutos(filtros);
+    if (!novos || novos.length < POR_PAGINA) estado.temMais = false;
+    estado.produtos = [...estado.produtos, ...novos];
+    estado.pagina++;
+    renderizarProdutos(estado.produtos, true);
+  } catch (e) {
+    if (estado.produtos.length === 0) {
+      document.getElementById('produto-lista').innerHTML =
+        '<div class="lista-vazia">⚠️ Erro ao carregar.<br>Verifique sua conexão.</div>';
+    }
+    console.error(e);
+  } finally {
+    estado.carregandoMais = false;
+  }
+}
+
+function renderizarProdutos(produtos, manterScroll = false) {
+  const lista = document.getElementById('produto-lista');
+  const scrollAntes = lista.scrollTop;
+
+  if (!produtos || produtos.length === 0) {
+    lista.innerHTML = '<div class="lista-vazia">Nenhum produto encontrado.<br>Use o + para cadastrar.</div>';
+    return;
+  }
+
+  const ordenados = ordenarProdutos(produtos);
+  const rodape = estado.temMais
+    ? `<div class="loading-mais" id="sentinel">Carregando mais...</div>`
+    : `<div class="fim-lista">✓ ${produtos.length} produto${produtos.length !== 1 ? 's' : ''} carregado${produtos.length !== 1 ? 's' : ''}</div>`;
+
+  lista.innerHTML = ordenados.map(p => `
+    <div class="produto-card" onclick="abrirDetalhe('${p.id}')" role="listitem">
+      <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
+      <div class="produto-info">
+        <div class="produto-nome">${p.nome}</div>
+        <div class="produto-cat">${p.categoria} · ${p.codigo || '—'}</div>
+      </div>
+      <div class="produto-preco">
+        <div class="preco-label">VENDA</div>
+        <div class="preco-valor">${formatarMoeda(p.preco_venda)}</div>
+      </div>
+    </div>
+  `).join('') + rodape;
+
+  if (manterScroll) lista.scrollTop = scrollAntes;
+
+  const sentinel = document.getElementById('sentinel');
+  if (sentinel) {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        observer.disconnect();
+        carregarMaisProdutos();
+      }
+    }, { threshold: 0.1 });
+    observer.observe(sentinel);
+  }
+}
+
+function filtrarProdutos() {
+  clearTimeout(window._filtroTimer);
+  window._filtroTimer = setTimeout(resetarECarregar, 350);
+}
+
+// ─── DETALHE ───────────────────────────────────
+
+async function abrirDetalhe(id) {
+  irPara('tela-detalhe');
+  const corpo = document.getElementById('detalhe-corpo');
+  corpo.innerHTML = '<div class="loading">Carregando...</div>';
+
+  const badge = document.getElementById('badge-detalhe');
+  badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
+  badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
+
+  try {
+    const p = await supabase.getProdutoPorId(id);
+    if (!p) { corpo.innerHTML = '<div class="lista-vazia">Produto não encontrado.</div>'; return; }
+    estado.produtoAtual = p;
+    salvarRecente(p);
+
+    const margem = calcularMargem(p.preco_compra, p.preco_venda);
+    const lucro  = (p.preco_venda - p.preco_compra).toFixed(2);
+    const isAdmin = estado.tipo === 'admin';
+
+    // Histórico de preços
+    const historico = await supabase.getHistorico(id);
+    const blocoHistorico = historico && historico.length > 0 ? `
+      <div class="hist-bloco">
+        <div class="hist-titulo">📊 Histórico de preços</div>
+        ${historico.map(h => `
+          <div class="hist-linha">
+            <span class="hist-data">${formatarData(h.alterado_em)}</span>
+            <span class="hist-vals">
+              <span class="cor-compra">C: ${formatarMoeda(h.preco_compra)}</span>
+              <span class="cor-venda">V: ${formatarMoeda(h.preco_venda)}</span>
+            </span>
+            <span class="hist-por">${h.alterado_por || '—'}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+
+    corpo.innerHTML = `
+      <div class="detalhe-hero">
+        <div class="detalhe-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
+        <div class="detalhe-nome">${p.nome}</div>
+        <div class="detalhe-cat">${p.categoria}</div>
+        <div class="detalhe-codigo">Código: ${p.codigo || '—'}</div>
+      </div>
+      <div class="preco-grid">
+        <div class="preco-box">
+          <div class="preco-box-label">PREÇO DE COMPRA</div>
+          <div class="preco-box-valor cor-compra">${formatarMoeda(p.preco_compra)}</div>
+        </div>
+        <div class="preco-box">
+          <div class="preco-box-label">PREÇO DE VENDA</div>
+          <div class="preco-box-valor cor-venda">${formatarMoeda(p.preco_venda)}</div>
+        </div>
+      </div>
+      <div class="margem-box">
+        Margem: <strong>${margem}%</strong> &nbsp;·&nbsp;
+        Lucro: <strong>${formatarMoeda(lucro)}</strong> / unidade
+      </div>
+      <div class="meta-bloco">
+        <div class="meta-linha">
+          <span class="meta-chave">Categoria</span>
+          <span class="meta-valor">${p.categoria}</span>
+        </div>
+        <div class="meta-linha">
+          <span class="meta-chave">Última atualização</span>
+          <span class="meta-valor">${formatarData(p.atualizado_em)}</span>
+        </div>
+        <div class="meta-linha" style="border:none">
+          <span class="meta-chave">Atualizado por</span>
+          <span class="meta-valor">${p.atualizado_por || '—'}</span>
+        </div>
+      </div>
+      ${blocoHistorico}
+      ${isAdmin ? `
+        <button class="btn-editar" onclick="abrirEdicao('${p.id}')">
+          ✏️ Editar preços
+        </button>
+      ` : ''}
+    `;
+  } catch (e) {
+    corpo.innerHTML = '<div class="lista-vazia">Erro ao carregar produto.</div>';
+    console.error(e);
+  }
+}
+
+// ─── CADASTRO / EDIÇÃO ─────────────────────────
+
+function preencherSelectCategoria(valorAtual = '') {
+  const sel = document.getElementById('edit-categoria');
+  sel.innerHTML = CATEGORIAS.map(c =>
+    `<option value="${c}" ${c === valorAtual ? 'selected' : ''}>${c}</option>`
+  ).join('');
+}
+
+function abrirCadastro() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('edit-nome').value = '';
+  document.getElementById('edit-codigo').value = '';
+  document.getElementById('edit-compra').value = '';
+  document.getElementById('edit-venda').value = '';
+  document.getElementById('edit-erro').style.display = 'none';
+  document.getElementById('btn-deletar').style.display = 'none';
+  document.getElementById('editar-titulo').textContent = 'Novo produto';
+  document.getElementById('editar-voltar-btn').onclick = () => irPara('tela-busca');
+  preencherSelectCategoria();
+  irPara('tela-editar');
+}
+
+function abrirEdicao(id) {
+  const p = estado.produtoAtual;
+  if (!p) return;
+  document.getElementById('edit-id').value = p.id;
+  document.getElementById('edit-nome').value = p.nome;
+  document.getElementById('edit-codigo').value = p.codigo || '';
+  document.getElementById('edit-compra').value = p.preco_compra;
+  document.getElementById('edit-venda').value = p.preco_venda;
+  document.getElementById('edit-erro').style.display = 'none';
+  document.getElementById('btn-deletar').style.display = 'block';
+  document.getElementById('editar-titulo').textContent = 'Editar produto';
+  document.getElementById('editar-voltar-btn').onclick = () => irPara('tela-detalhe');
+  preencherSelectCategoria(p.categoria);
+  irPara('tela-editar');
+}
+
+async function salvarProduto() {
+  const id      = document.getElementById('edit-id').value;
+  const nome    = document.getElementById('edit-nome').value.trim();
+  const codigo  = document.getElementById('edit-codigo').value.trim();
+  const cat     = document.getElementById('edit-categoria').value;
+  const compra  = parseFloat(document.getElementById('edit-compra').value);
+  const venda   = parseFloat(document.getElementById('edit-venda').value);
+  const erro    = document.getElementById('edit-erro');
+
+  if (!nome || isNaN(compra) || isNaN(venda)) {
+    erro.textContent = 'Preencha nome, compra e venda.';
+    erro.style.display = 'block';
+    return;
+  }
+  if (venda < compra) {
+    erro.textContent = 'Preço de venda menor que o de compra!';
+    erro.style.display = 'block';
+    return;
+  }
+
+  erro.style.display = 'none';
+  const btn = document.querySelector('#tela-editar .btn-primario');
+  btn.textContent = 'Salvando...';
+  btn.disabled = true;
+
+  const dados = {
+    nome, codigo, categoria: cat,
+    preco_compra: compra, preco_venda: venda,
+    atualizado_em: new Date().toISOString(),
+    atualizado_por: estado.usuario?.usuario || 'Admin'
+  };
+
+  try {
+    if (id) {
+      // Salvar histórico antes de atualizar
+      const anterior = estado.produtoAtual;
+      if (anterior && (anterior.preco_compra !== compra || anterior.preco_venda !== venda)) {
+        await supabase.salvarHistorico({
+          produto_id: id,
+          preco_compra: anterior.preco_compra,
+          preco_venda: anterior.preco_venda,
+          alterado_em: new Date().toISOString(),
+          alterado_por: estado.usuario?.usuario || 'Admin'
+        });
+      }
+      await supabase.atualizarProduto(id, dados);
+      mostrarToast('✅ Produto atualizado!');
+      await abrirDetalhe(id);
+    } else {
+      await supabase.criarProduto(dados);
+      mostrarToast('✅ Produto cadastrado!');
+      // Atualizar contagem
+      supabase.getContagemCategorias().then(c => {
+        estado.contagemCats = c;
+      }).catch(() => {});
+      await carregarTelaInicio();
+    }
+  } catch (e) {
+    erro.textContent = 'Erro ao salvar. Tente novamente.';
+    erro.style.display = 'block';
+    console.error(e);
+  } finally {
+    btn.textContent = '💾 SALVAR';
+    btn.disabled = false;
+  }
+}
+
+async function deletarProduto() {
+  const id = document.getElementById('edit-id').value;
+  if (!id) return;
+  if (!confirm('Deseja excluir este produto? Esta ação não pode ser desfeita.')) return;
+
+  try {
+    await supabase.deletarProduto(id);
+    mostrarToast('🗑 Produto excluído.');
+    supabase.getContagemCategorias().then(c => { estado.contagemCats = c; }).catch(() => {});
+    await carregarTelaInicio();
+  } catch (e) {
+    alert('Erro ao excluir. Tente novamente.');
+    console.error(e);
+  }
+}
+
+// ─── INICIALIZAÇÃO ─────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('inp-usuario').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('inp-senha').focus();
+  });
+  document.getElementById('inp-senha').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fazerLogin();
+  });
+  document.getElementById('btn-ord-az').classList.add('ativo');
+});
+
+// ─── SERVICE WORKER ────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(console.error);
+  });
 }
