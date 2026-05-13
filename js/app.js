@@ -8,7 +8,7 @@ let estado = {
   produtos: [],
   categoriaAtiva: 'Todos',
   produtoAtual: null,
-  ordenacao: 'az',
+  ordenacao: 'az', // 'az', 'codigo' ou 'margem'
   pagina: 0,
   carregandoMais: false,
   temMais: true,
@@ -99,6 +99,13 @@ function ordenarProdutos(produtos) {
       const ca = (a.codigo || '').replace(/\D/g, '').padStart(10, '0');
       const cb = (b.codigo || '').replace(/\D/g, '').padStart(10, '0');
       return ca.localeCompare(cb);
+    });
+  }
+  if (estado.ordenacao === 'margem') {
+    return [...produtos].sort((a, b) => {
+      const ma = a.preco_compra > 0 ? (a.preco_venda - a.preco_compra) / a.preco_compra : 0;
+      const mb = b.preco_compra > 0 ? (b.preco_venda - b.preco_compra) / b.preco_compra : 0;
+      return mb - ma; // maior margem primeiro
     });
   }
   return [...produtos].sort((a, b) =>
@@ -280,6 +287,11 @@ async function carregarTelaBusca() {
   montarCategorias();
   irPara('tela-busca');
   await resetarECarregar();
+  // Focar no campo de busca após pequeno delay
+  setTimeout(() => {
+    const inp = document.getElementById('inp-busca');
+    if (inp) inp.focus();
+  }, 300);
 }
 
 function montarCategorias() {
