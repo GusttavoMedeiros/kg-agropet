@@ -117,7 +117,13 @@ function alternarOrdenacao(nova) {
   estado.ordenacao = nova;
   document.getElementById('btn-ord-az').classList.toggle('ativo', nova === 'az');
   document.getElementById('btn-ord-cod').classList.toggle('ativo', nova === 'codigo');
-  renderizarProdutos(estado.produtos, false);
+  document.getElementById('btn-ord-margem').classList.toggle('ativo', nova === 'margem');
+  // Margem é ordenação local; az e codigo recarregam do servidor
+  if (nova === 'margem') {
+    renderizarProdutos(estado.produtos, false);
+  } else {
+    resetarECarregar();
+  }
 }
 
 // ─── LOGIN ─────────────────────────────────────
@@ -157,6 +163,7 @@ async function fazerLogin() {
       return;
     }
     estado.usuario = user;
+    carregarCacheNomes(); // Cache para sugestões (em background)
     await carregarTelaInicio();
   } catch (e) {
     erro.textContent = 'Erro de conexão. Verifique sua internet.';
@@ -286,12 +293,13 @@ async function carregarTelaBusca() {
 
   montarCategorias();
   irPara('tela-busca');
+  // Destacar visualmente o campo de busca (pulse animation)
+  const buscaBox = document.querySelector('.busca-box');
+  if (buscaBox) {
+    buscaBox.classList.add('busca-destaque');
+    setTimeout(() => buscaBox.classList.remove('busca-destaque'), 1500);
+  }
   await resetarECarregar();
-  // Focar no campo de busca após pequeno delay
-  setTimeout(() => {
-    const inp = document.getElementById('inp-busca');
-    if (inp) inp.focus();
-  }, 300);
 }
 
 function montarCategorias() {
@@ -412,9 +420,134 @@ function renderizarProdutos(produtos, manterScroll = false) {
   }
 }
 
+
+// ─── BUSCA INTELIGENTE (sugestões + fuzzy) ─────
+
+function normalizar(s) {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+// Distância de Levenshtein simplificada
+function distancia(a, b) {
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp = Array(b.length + 1).fill(0).map((_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const temp = dp[j];
+      dp[j] = a[i-1] === b[j-1]
+        ? dp[j-1]
+        : 1 + Math.min(dp[j-1], dp[j], prev);
+      prev = temp;
+    }
+    dp[0] = i;
+  }
+  return dp[b.length];
+}
+
+// Cache local dos nomes de produtos para sugestões rápidas
+let cacheNomes = null;
+
+async function carregarCacheNomes() {
+  try {
+    const todos = await supabase.getProdutos({ limit: 1000 });
+    cacheNomes = (todos || []).map(p => ({
+      id: p.id,
+      nome: p.nome,
+      nome_norm: normalizar(p.nome),
+      codigo: p.codigo || ''
+    }));
+  } catch(e) { cacheNomes = []; }
+}
+
+function gerarSugestoes(termo) {
+  if (!cacheNomes || cacheNomes.length === 0) return [];
+  const tNorm = normalizar(termo);
+  if (tNorm.length < 2) return [];
+
+  const palavras = tNorm.split(/\s+/).filter(Boolean);
+
+  // 1. Matches exatos (contém o termo)
+  const exatos = cacheNomes.filter(p =>
+    palavras.every(pal => p.nome_norm.includes(pal)) ||
+    p.codigo.toLowerCase().includes(tNorm)
+  );
+
+  // 2. Se há matches exatos suficientes, retorna eles
+  if (exatos.length >= 5) return exatos.slice(0, 5);
+
+  // 3. Senão, complementa com matches por similaridade (fuzzy)
+  const fuzzy = cacheNomes
+    .filter(p => !exatos.some(e => e.id === p.id))
+    .map(p => {
+      // Para cada palavra do nome, pega a menor distância contra o termo
+      const palavrasNome = p.nome_norm.split(/\s+/);
+      let melhorDist = Infinity;
+      for (const palNome of palavrasNome) {
+        for (const palTermo of palavras) {
+          if (palTermo.length < 3) continue;
+          const d = distancia(palTermo, palNome.slice(0, palTermo.length + 1));
+          if (d < melhorDist) melhorDist = d;
+        }
+      }
+      return { ...p, dist: melhorDist };
+    })
+    .filter(p => p.dist <= 2)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, 5 - exatos.length);
+
+  return [...exatos, ...fuzzy].slice(0, 5);
+}
+
+function mostrarSugestoes() {
+  const termo = document.getElementById('inp-busca').value;
+  const cont = document.getElementById('sugestoes-lista');
+
+  if (!termo || termo.length < 2) {
+    cont.innerHTML = '';
+    cont.style.display = 'none';
+    return;
+  }
+
+  const sugs = gerarSugestoes(termo);
+  if (sugs.length === 0) {
+    cont.innerHTML = '';
+    cont.style.display = 'none';
+    return;
+  }
+
+  cont.innerHTML = sugs.map(s => `
+    <div class="sugestao-item" onclick="aplicarSugestao('${s.id}', \`${s.nome.replace(/`/g, "\\`")}\`)">
+      <span class="sugestao-icone">🔍</span>
+      <span class="sugestao-texto">${s.nome}</span>
+      <span class="sugestao-codigo">${s.codigo}</span>
+    </div>
+  `).join('');
+  cont.style.display = 'block';
+}
+
+function aplicarSugestao(id, nome) {
+  document.getElementById('inp-busca').value = nome;
+  document.getElementById('sugestoes-lista').style.display = 'none';
+  abrirDetalhe(id);
+}
+
+function esconderSugestoes() {
+  setTimeout(() => {
+    const cont = document.getElementById('sugestoes-lista');
+    if (cont) cont.style.display = 'none';
+  }, 200);
+}
+
 function filtrarProdutos() {
+  mostrarSugestoes(); // Sugestões aparecem imediatamente
   clearTimeout(window._filtroTimer);
-  window._filtroTimer = setTimeout(resetarECarregar, 350);
+  window._filtroTimer = setTimeout(resetarECarregar, 400);
 }
 
 // ─── DETALHE ───────────────────────────────────
@@ -568,8 +701,16 @@ async function salvarProduto() {
   btn.textContent = 'Salvando...';
   btn.disabled = true;
 
+  // Normaliza o nome para busca (sem acento, minúsculas)
+  const nomeBusca = nome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
   const dados = {
-    nome, codigo, categoria: cat,
+    nome,
+    nome_busca: nomeBusca,
+    codigo, categoria: cat,
     preco_compra: compra, preco_venda: venda,
     atualizado_em: new Date().toISOString(),
     atualizado_por: estado.usuario?.usuario || 'Admin'
@@ -590,11 +731,12 @@ async function salvarProduto() {
       }
       await supabase.atualizarProduto(id, dados);
       mostrarToast('✅ Produto atualizado!');
+      carregarCacheNomes(); // Atualizar cache de sugestões
       await abrirDetalhe(id);
     } else {
       await supabase.criarProduto(dados);
       mostrarToast('✅ Produto cadastrado!');
-      // Atualizar contagem
+      carregarCacheNomes(); // Atualizar cache de sugestões
       supabase.getContagemCategorias().then(c => {
         estado.contagemCats = c;
       }).catch(() => {});
@@ -618,6 +760,7 @@ async function deletarProduto() {
   try {
     await supabase.deletarProduto(id);
     mostrarToast('🗑 Produto excluído.');
+    carregarCacheNomes(); // Atualizar cache de sugestões
     supabase.getContagemCategorias().then(c => { estado.contagemCats = c; }).catch(() => {});
     await carregarTelaInicio();
   } catch (e) {
