@@ -37,14 +37,24 @@ const supabase = {
       query += `&categoria=eq.${encodeURIComponent(filtros.categoria)}`;
     }
     if (filtros.busca) {
-      // Busca com e sem acento — normaliza para latin base
-      const termo = filtros.busca;
-      const semAcento = termo.normalize('NFD').replace(/[̀-ͯ]/g, '');
-      // Tenta os dois termos para cobrir ambos os casos
-      if (semAcento !== termo) {
-        query += `&or=(nome.ilike.*${encodeURIComponent(termo)}*,nome.ilike.*${encodeURIComponent(semAcento)}*,codigo.ilike.*${encodeURIComponent(termo)}*)`;
+      // Normalizar: remover acentos + minúsculas
+      const termoLimpo = filtros.busca
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .trim();
+
+      // Quebrar em palavras — busca cada uma independente
+      const palavras = termoLimpo.split(/\s+/).filter(p => p.length > 0);
+
+      if (palavras.length === 1) {
+        // Uma palavra só: busca no nome OU no código
+        query += `&or=(nome_busca.ilike.*${encodeURIComponent(palavras[0])}*,codigo.ilike.*${encodeURIComponent(filtros.busca)}*)`;
       } else {
-        query += `&or=(nome.ilike.*${encodeURIComponent(termo)}*,codigo.ilike.*${encodeURIComponent(termo)}*)`;
+        // Várias palavras: cada uma DEVE aparecer no nome
+        palavras.forEach(p => {
+          query += `&nome_busca=ilike.*${encodeURIComponent(p)}*`;
+        });
       }
     }
     return this.request(query);
