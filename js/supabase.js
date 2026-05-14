@@ -47,13 +47,19 @@ const supabase = {
       // Quebrar em palavras — busca cada uma independente
       const palavras = termoLimpo.split(/\s+/).filter(p => p.length > 0);
 
+      // Função para escapar caracteres especiais do PostgREST
+      // (vírgula, parênteses e * têm significado na sintaxe)
+      const esc = (s) => s.replace(/[(),*\\]/g, '');
+
       if (palavras.length === 1) {
-        // Uma palavra só: busca no nome OU no código
-        query += `&or=(nome_busca.ilike.*${encodeURIComponent(palavras[0])}*,codigo.ilike.*${encodeURIComponent(filtros.busca)}*)`;
+        // Uma palavra: busca no nome_busca OU no código
+        const p = esc(palavras[0]);
+        const cod = esc(termoLimpo);
+        query += `&or=(nome_busca.ilike.*${p}*,codigo.ilike.*${cod}*)`;
       } else {
-        // Várias palavras: cada uma DEVE aparecer no nome
+        // Várias palavras: TODAS devem aparecer no nome (AND)
         palavras.forEach(p => {
-          query += `&nome_busca=ilike.*${encodeURIComponent(p)}*`;
+          query += `&nome_busca=ilike.*${esc(p)}*`;
         });
       }
     }
