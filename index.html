@@ -23,13 +23,10 @@
   <div class="login-wrap">
     <div class="logo-block">
       <div class="logo-symbol">
-        <svg width="42" height="42" viewBox="0 0 42 42" aria-hidden="true">
-          <ellipse cx="21" cy="26" rx="9" ry="8" fill="#c9a84c"/>
-          <ellipse cx="10" cy="21" rx="4" ry="5.5" fill="#c9a84c" transform="rotate(-15 10 21)"/>
-          <ellipse cx="16" cy="15" rx="4" ry="5.5" fill="#c9a84c" transform="rotate(-5 16 15)"/>
-          <ellipse cx="26" cy="15" rx="4" ry="5.5" fill="#c9a84c" transform="rotate(5 26 15)"/>
-          <ellipse cx="32" cy="21" rx="4" ry="5.5" fill="#c9a84c" transform="rotate(15 32 21)"/>
-        </svg>
+        <picture>
+          <source srcset="logo.webp" type="image/webp"/>
+          <img src="logo.png" alt="KG Agropet" width="90" height="90" style="border-radius:12px;display:block;"/>
+        </picture>
       </div>
       <div class="logo-nome">KG AGROPET</div>
       <div class="logo-tag">Qualidade que alimenta</div>
@@ -87,8 +84,9 @@
     </div>
     <div class="busca-box">
       <span class="busca-icone">🔍</span>
-      <input class="busca-input" id="inp-busca" type="search" placeholder="Buscar por nome ou código..." oninput="filtrarProdutos()" autocomplete="off"/>
+      <input class="busca-input" id="inp-busca" type="search" placeholder="Buscar por nome ou código..." oninput="filtrarProdutos()" onblur="esconderSugestoes()" autocomplete="off"/>
     </div>
+    <div class="sugestoes-lista" id="sugestoes-lista" style="display:none"></div>
   </div>
   <div class="cats-scroll" id="cats-lista" role="list" aria-label="Categorias"></div>
   <div class="produto-lista" id="produto-lista" role="list" aria-label="Produtos"></div>
