@@ -9,6 +9,7 @@ let estado = {
   categoriaAtiva: 'Todos',
   produtoAtual: null,
   ordenacao: 'az', // 'az', 'codigo' ou 'margem'
+  direcao: 'asc',  // 'asc' ou 'desc'
   pagina: 0,
   carregandoMais: false,
   temMais: true,
@@ -94,35 +95,77 @@ function getRecentes() {
 // ─── ORDENAÇÃO ─────────────────────────────────
 
 function ordenarProdutos(produtos) {
+  const dir = estado.direcao || 'asc';
+  const inv = dir === 'desc' ? -1 : 1;
+
   if (estado.ordenacao === 'codigo') {
     return [...produtos].sort((a, b) => {
       const ca = (a.codigo || '').replace(/\D/g, '').padStart(10, '0');
       const cb = (b.codigo || '').replace(/\D/g, '').padStart(10, '0');
-      return ca.localeCompare(cb);
+      return ca.localeCompare(cb) * inv;
     });
   }
   if (estado.ordenacao === 'margem') {
     return [...produtos].sort((a, b) => {
       const ma = a.preco_compra > 0 ? (a.preco_venda - a.preco_compra) / a.preco_compra : 0;
       const mb = b.preco_compra > 0 ? (b.preco_venda - b.preco_compra) / b.preco_compra : 0;
-      return mb - ma; // maior margem primeiro
+      // Default: maior para menor (desc). Se asc, inverte.
+      return (mb - ma) * (dir === 'asc' ? -1 : 1);
     });
   }
   return [...produtos].sort((a, b) =>
-    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }) * inv
   );
 }
 
 function alternarOrdenacao(nova) {
-  estado.ordenacao = nova;
-  document.getElementById('btn-ord-az').classList.toggle('ativo', nova === 'az');
-  document.getElementById('btn-ord-cod').classList.toggle('ativo', nova === 'codigo');
-  document.getElementById('btn-ord-margem').classList.toggle('ativo', nova === 'margem');
+  // Se clicar no mesmo botão, inverte a direção
+  if (estado.ordenacao === nova) {
+    estado.direcao = estado.direcao === 'asc' ? 'desc' : 'asc';
+  } else {
+    estado.ordenacao = nova;
+    // Margem padrão decrescente (maior margem primeiro); resto crescente
+    estado.direcao = (nova === 'margem') ? 'desc' : 'asc';
+  }
+
+  // Atualizar visual dos botões
+  ['az','codigo','margem'].forEach(tipo => {
+    const el = document.getElementById('btn-ord-' + (tipo === 'codigo' ? 'cod' : tipo));
+    if (el) el.classList.toggle('ativo', estado.ordenacao === tipo);
+  });
+
+  // Atualizar texto dos botões com seta de direção
+  atualizarTextosOrdenacao();
+
   // Margem é ordenação local; az e codigo recarregam do servidor
   if (nova === 'margem') {
     renderizarProdutos(estado.produtos, false);
   } else {
     resetarECarregar();
+  }
+}
+
+function atualizarTextosOrdenacao() {
+  const dir = estado.direcao || 'asc';
+  const seta = dir === 'asc' ? '↑' : '↓';
+  const btnAz  = document.getElementById('btn-ord-az');
+  const btnCod = document.getElementById('btn-ord-cod');
+  const btnMg  = document.getElementById('btn-ord-margem');
+
+  if (btnAz) {
+    btnAz.innerHTML = estado.ordenacao === 'az'
+      ? `<span class="ord-icon">🔤</span> ${dir === 'asc' ? 'A — Z' : 'Z — A'}`
+      : `<span class="ord-icon">🔤</span> A — Z`;
+  }
+  if (btnCod) {
+    btnCod.innerHTML = estado.ordenacao === 'codigo'
+      ? `<span class="ord-icon">🔢</span> Cód. ${seta}`
+      : `<span class="ord-icon">🔢</span> Cód. 001↑`;
+  }
+  if (btnMg) {
+    btnMg.innerHTML = estado.ordenacao === 'margem'
+      ? `<span class="ord-icon">📈</span> Margem ${seta}`
+      : `<span class="ord-icon">📈</span> Margem`;
   }
 }
 
@@ -186,10 +229,40 @@ function cancelarLogout() {
 
 function fazerLogout() {
   document.getElementById('modal-logout').style.display = 'none';
+
+  // Reset COMPLETO do estado do app
   estado.usuario = null;
   estado.produtos = [];
+  estado.categoriaAtiva = 'Todos';
+  estado.ordenacao = 'az';
+  estado.direcao = 'asc';
+  estado.pagina = 0;
+  estado.produtoAtual = null;
+  estado.contagemCats = {};
+
+  // Limpar campos de login e busca
   document.getElementById('inp-usuario').value = '';
   document.getElementById('inp-senha').value = '';
+  const inpBusca = document.getElementById('inp-busca');
+  if (inpBusca) inpBusca.value = '';
+
+  // Limpar sugestões e cache de nomes
+  cacheNomes = null;
+  const sug = document.getElementById('sugestoes-lista');
+  if (sug) { sug.innerHTML = ''; sug.style.display = 'none'; }
+
+  // Limpar histórico de produtos vistos recentemente
+  try { localStorage.removeItem('kg_recentes'); } catch(e) {}
+
+  // Resetar visual dos botões de ordenação
+  atualizarTextosOrdenacao();
+  ['az','codigo','margem'].forEach(t => {
+    const el = document.getElementById('btn-ord-' + (t === 'codigo' ? 'cod' : t));
+    if (el) el.classList.toggle('ativo', t === 'az');
+  });
+
+  // Voltar para login com perfil Admin selecionado por padrão
+  selecionarTipo('admin');
   irPara('tela-login');
 }
 
@@ -346,6 +419,7 @@ async function carregarMaisProdutos() {
       offset: estado.pagina * POR_PAGINA,
       limit: POR_PAGINA,
       ordenacao: estado.ordenacao,
+      direcao: estado.direcao,
     };
     const novos = await supabase.getProdutos(filtros);
     if (!novos || novos.length < POR_PAGINA) estado.temMais = false;
@@ -694,6 +768,27 @@ async function salvarProduto() {
     erro.textContent = 'Preço de venda menor que o de compra!';
     erro.style.display = 'block';
     return;
+  }
+
+  // VALIDAÇÃO DE CÓDIGO DUPLICADO
+  if (codigo) {
+    erro.style.display = 'none';
+    const btnCheck = document.querySelector('#tela-editar .btn-primario');
+    btnCheck.textContent = 'Verificando código...';
+    btnCheck.disabled = true;
+    try {
+      const existente = await supabase.buscarPorCodigo(codigo);
+      // Se encontrou e não é o próprio produto sendo editado
+      if (existente && existente.id !== id) {
+        erro.textContent = `⚠️ O código "${codigo}" já está em uso pelo produto "${existente.nome}".`;
+        erro.style.display = 'block';
+        btnCheck.textContent = '💾 SALVAR';
+        btnCheck.disabled = false;
+        return;
+      }
+    } catch (e) {
+      console.error('Erro ao verificar código:', e);
+    }
   }
 
   erro.style.display = 'none';
