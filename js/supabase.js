@@ -44,22 +44,22 @@ const supabase = {
         .toLowerCase()
         .trim();
 
-      // Quebrar em palavras — busca cada uma independente
+      // Quebrar em palavras
       const palavras = termoLimpo.split(/\s+/).filter(p => p.length > 0);
 
-      // Função para escapar caracteres especiais do PostgREST
-      // (vírgula, parênteses e * têm significado na sintaxe)
-      const esc = (s) => s.replace(/[(),*\\]/g, '');
+      // Escapar caracteres especiais do PostgREST
+      // ( ) , * \ . têm significado especial na sintaxe
+      const esc = (s) => encodeURIComponent(s.replace(/[(),*\\]/g, ''));
 
       if (palavras.length === 1) {
-        // Uma palavra: busca no nome_busca OU no código
+        // Uma palavra: busca no nome_busca OU no código (com %2A para wildcard)
         const p = esc(palavras[0]);
         const cod = esc(termoLimpo);
-        query += `&or=(nome_busca.ilike.*${p}*,codigo.ilike.*${cod}*)`;
+        query += `&or=(nome_busca.ilike.%2A${p}%2A,codigo.ilike.%2A${cod}%2A)`;
       } else {
         // Várias palavras: TODAS devem aparecer no nome (AND)
         palavras.forEach(p => {
-          query += `&nome_busca=ilike.*${esc(p)}*`;
+          query += `&nome_busca=ilike.%2A${esc(p)}%2A`;
         });
       }
     }
