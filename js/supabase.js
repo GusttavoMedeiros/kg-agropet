@@ -31,7 +31,8 @@ const supabase = {
   async getProdutos(filtros = {}) {
     const limit  = filtros.limit  || 50;
     const offset = filtros.offset || 0;
-    const ordem = filtros.ordenacao === 'codigo' ? 'codigo.asc' : 'nome.asc';
+    const dir = filtros.direcao === 'desc' ? 'desc' : 'asc';
+    const ordem = filtros.ordenacao === 'codigo' ? `codigo.${dir}` : `nome.${dir}`;
     let query = `produtos?select=*&limit=${limit}&offset=${offset}&order=${ordem}`;
     if (filtros.categoria && filtros.categoria !== 'Todos') {
       query += `&categoria=eq.${encodeURIComponent(filtros.categoria)}`;
@@ -64,6 +65,13 @@ const supabase = {
       }
     }
     return this.request(query);
+  },
+
+  // Buscar produto por código exato (para validação de duplicidade)
+  async buscarPorCodigo(codigo) {
+    const cod = encodeURIComponent(codigo);
+    const data = await this.request(`produtos?codigo=eq.${cod}&select=id,nome,codigo&limit=1`);
+    return data[0] || null;
   },
 
   // Buscar produto por ID
