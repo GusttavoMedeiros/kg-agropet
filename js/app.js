@@ -245,6 +245,8 @@ function fazerLogout() {
   document.getElementById('inp-senha').value = '';
   const inpBusca = document.getElementById('inp-busca');
   if (inpBusca) inpBusca.value = '';
+  const btnX = document.getElementById('btn-limpar-busca');
+  if (btnX) btnX.style.display = 'none';
 
   // Limpar sugestões e cache de nomes
   cacheNomes = null;
@@ -619,9 +621,24 @@ function esconderSugestoes() {
 }
 
 function filtrarProdutos() {
-  mostrarSugestoes(); // Sugestões aparecem imediatamente
+  // Mostrar/esconder botão X de acordo com o conteúdo
+  const inp = document.getElementById('inp-busca');
+  const btn = document.getElementById('btn-limpar-busca');
+  if (btn) btn.style.display = inp.value.length > 0 ? 'flex' : 'none';
+
+  mostrarSugestoes();
   clearTimeout(window._filtroTimer);
   window._filtroTimer = setTimeout(resetarECarregar, 400);
+}
+
+function limparBusca() {
+  const inp = document.getElementById('inp-busca');
+  inp.value = '';
+  document.getElementById('btn-limpar-busca').style.display = 'none';
+  const sug = document.getElementById('sugestoes-lista');
+  if (sug) sug.style.display = 'none';
+  resetarECarregar();
+  inp.focus();
 }
 
 // ─── DETALHE ───────────────────────────────────
