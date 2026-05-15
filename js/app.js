@@ -843,15 +843,34 @@ async function salvarProduto() {
       }
       await supabase.atualizarProduto(id, dados);
       mostrarToast('✅ Produto atualizado!');
-      carregarCacheNomes(); // Atualizar cache de sugestões
+
+      // Atualizações em paralelo (em background)
+      await Promise.all([
+        carregarCacheNomes(),
+        supabase.getContagemCategorias().then(c => { estado.contagemCats = c; }).catch(() => {})
+      ]);
+
+      // Invalidar lista para recarregar do servidor na próxima visualização
+      estado.produtos = [];
+      estado.pagina = 0;
+      estado.temMais = true;
+
       await abrirDetalhe(id);
     } else {
       await supabase.criarProduto(dados);
       mostrarToast('✅ Produto cadastrado!');
-      carregarCacheNomes(); // Atualizar cache de sugestões
-      supabase.getContagemCategorias().then(c => {
-        estado.contagemCats = c;
-      }).catch(() => {});
+
+      // Atualizações em paralelo
+      await Promise.all([
+        carregarCacheNomes(),
+        supabase.getContagemCategorias().then(c => { estado.contagemCats = c; }).catch(() => {})
+      ]);
+
+      // Resetar lista
+      estado.produtos = [];
+      estado.pagina = 0;
+      estado.temMais = true;
+
       await carregarTelaInicio();
     }
   } catch (e) {
@@ -872,8 +891,19 @@ async function deletarProduto() {
   try {
     await supabase.deletarProduto(id);
     mostrarToast('🗑 Produto excluído.');
-    carregarCacheNomes(); // Atualizar cache de sugestões
-    supabase.getContagemCategorias().then(c => { estado.contagemCats = c; }).catch(() => {});
+
+    // Atualizações em paralelo
+    await Promise.all([
+      carregarCacheNomes(),
+      supabase.getContagemCategorias().then(c => { estado.contagemCats = c; }).catch(() => {})
+    ]);
+
+    // Resetar lista
+    estado.produtos = [];
+    estado.pagina = 0;
+    estado.temMais = true;
+    estado.produtoAtual = null;
+
     await carregarTelaInicio();
   } catch (e) {
     alert('Erro ao excluir. Tente novamente.');
