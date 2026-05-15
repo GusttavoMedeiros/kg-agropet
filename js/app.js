@@ -356,6 +356,16 @@ function irParaBusca(categoria) {
   carregarTelaBusca();
 }
 
+// Volta para a lista de produtos forçando recarga (após editar produto)
+async function voltarParaBusca() {
+  // Limpa a lista em memória para forçar nova busca no servidor
+  estado.produtos = [];
+  estado.pagina = 0;
+  estado.temMais = true;
+  irPara('tela-busca');
+  await resetarECarregar();
+}
+
 // ─── TELA BUSCA ────────────────────────────────
 
 async function carregarTelaBusca() {
