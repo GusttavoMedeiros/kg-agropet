@@ -743,9 +743,9 @@ async function salvarProduto() {
       await carregarTelaInicio();
     }
   } catch (e) {
-    erro.textContent = 'Erro ao salvar. Tente novamente.';
+    erro.textContent = 'Erro ao salvar: ' + (e.message || 'tente novamente');
     erro.style.display = 'block';
-    console.error(e);
+    console.error('Erro detalhado:', e);
   } finally {
     btn.textContent = '💾 SALVAR';
     btn.disabled = false;
