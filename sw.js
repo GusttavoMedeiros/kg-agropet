@@ -1,41 +1,56 @@
 // Service Worker — KG Agropet PWA
 // IMPORTANTE: incrementar versão a cada atualização para forçar refresh
-const CACHE = 'kg-agropet-v3';
+const CACHE = 'kg-agropet-v4';
 
 self.addEventListener('install', e => {
-  // Pula direto para ativar, sem esperar
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.map(k => caches.delete(k)))  // Limpa TODOS os caches antigos
+      Promise.all(keys.map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
 
-// Estratégia: SEMPRE buscar online, cache só como fallback offline
 self.addEventListener('fetch', e => {
-  // Requisições ao Supabase: sempre online
-  if (e.request.url.includes('supabase.co')) {
+  const { request } = e;
+
+  // 1. Requisições ao Supabase: sempre online, nunca cachear
+  if (request.url.includes('supabase.co')) {
     e.respondWith(
-      fetch(e.request).catch(() => new Response('offline', { status: 503 }))
+      fetch(request).catch(() =>
+        new Response(
+          JSON.stringify({ error: 'offline', message: 'Sem conexão com o banco de dados.' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
     );
     return;
   }
 
-  // App shell: network-first com fallback para cache
+  // 2. Só processar requisições GET para o App Shell
+  // Métodos POST/PATCH/DELETE nunca devem ser cacheados
+  if (request.method !== 'GET') return;
+
+  // 3. App Shell: Network-First com fallback para cache
   e.respondWith(
-    fetch(e.request)
+    fetch(request)
       .then(response => {
-        // Salva no cache para uso offline futuro
-        const responseClone = response.clone();
-        caches.open(CACHE).then(cache => {
-          cache.put(e.request, responseClone);
-        });
+        // Só cachear respostas válidas (status 200 e tipo básico ou cors)
+        // Evita cachear erros 404, 429, 500 ou respostas opacas
+        const cacheavel =
+          response.status === 200 &&
+          (response.type === 'basic' || response.type === 'cors');
+
+        if (cacheavel) {
+          const responseClone = response.clone();
+          caches.open(CACHE).then(cache => cache.put(request, responseClone));
+        }
+
         return response;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() => caches.match(request))
   );
 });
