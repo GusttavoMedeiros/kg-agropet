@@ -673,6 +673,12 @@ html, body {
     overflow-y: auto;
   }
 
+  /* Neutralizar o margin-top:auto inline da linha decorativa que estava empurrando tudo para o topo */
+  .login-wrap .gold-line[style*="margin-top:auto"] {
+    margin-top: 0 !important;
+    margin-top: 12px !important;
+  }
+
   /* Logo maior no desktop */
   .logo-symbol {
     width: 130px; height: 130px;
