@@ -667,8 +667,10 @@ html, body {
   .login-wrap {
     max-width: 100%;
     padding: 0 3rem;
-    justify-content: center; /* centraliza verticalmente */
+    height: 100vh;
+    justify-content: center;
     gap: 1.1rem;
+    overflow-y: auto;
   }
 
   /* Logo maior no desktop */
