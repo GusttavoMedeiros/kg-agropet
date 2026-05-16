@@ -433,12 +433,15 @@ async function carregarMaisProdutos() {
       ordenacao: estado.ordenacao,
       direcao: estado.direcao,
     };
-    const novos = await supabase.getProdutos(filtros);
+    // getProdutosComAbort cancela requisições antigas automaticamente (AbortController)
+    const novos = await supabase.getProdutosComAbort(filtros);
     if (!novos || novos.length < POR_PAGINA) estado.temMais = false;
     estado.produtos = [...estado.produtos, ...novos];
     estado.pagina++;
     renderizarProdutos(estado.produtos, true);
   } catch (e) {
+    // AbortError é intencional (nova busca cancelou a anterior) — ignora silenciosamente
+    if (e.name === 'AbortError') return;
     if (estado.produtos.length === 0) {
       document.getElementById('produto-lista').innerHTML =
         '<div class="lista-vazia">⚠️ Erro ao carregar.<br>Verifique sua conexão.</div>';
@@ -494,15 +497,22 @@ function renderizarProdutos(produtos, manterScroll = false) {
 
   if (manterScroll) lista.scrollTop = scrollAntes;
 
+  // Desconectar observer anterior antes de criar novo (evita acúmulo em memória)
+  if (window._sentinelObserver) {
+    window._sentinelObserver.disconnect();
+    window._sentinelObserver = null;
+  }
+
   const sentinel = document.getElementById('sentinel');
   if (sentinel) {
-    const observer = new IntersectionObserver(entries => {
+    window._sentinelObserver = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting) {
-        observer.disconnect();
+        window._sentinelObserver.disconnect();
+        window._sentinelObserver = null;
         carregarMaisProdutos();
       }
     }, { threshold: 0.1 });
-    observer.observe(sentinel);
+    window._sentinelObserver.observe(sentinel);
   }
 }
 
