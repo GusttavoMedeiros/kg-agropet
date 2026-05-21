@@ -1226,7 +1226,7 @@ body::after {
       #08160f;
   }
   .tela {
-    max-width: 560px;
+    max-width: 720px;
     margin: 0 auto;
     left: 50% !important;
     transform: translateX(-50%);
@@ -1237,20 +1237,51 @@ body::after {
   .login-wrap {
     height: 100vh;
     justify-content: center;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 2rem;
   }
   .login-wrap .gold-line[style*="margin-top:auto"] {
     margin-top: 12px !important;
   }
-  .logo-symbol { width: 140px; height: 140px; }
-  .logo-nome { font-size: 28px; }
-  .fab {
-    right: calc(50% - 252px);
-    width: 54px; height: 54px;
+  .logo-symbol { width: 150px; height: 150px; }
+  .logo-nome { font-size: 32px; letter-spacing: 0.22em; }
+  .logo-tag { font-size: 12px; letter-spacing: 0.3em; }
+
+  /* Botões com altura consistente no desktop */
+  .tipo-btn { padding: 14px 18px; font-size: 14px; }
+  .login-input,
+  .campo-input,
+  .campo-select { padding: 14px 16px; font-size: 16px; }
+
+  /* Botão ENTRAR proporcional aos campos (não gigante) */
+  .btn-primario,
+  .btn-entrar {
+    padding: 14px;
+    font-size: 14px;
+    letter-spacing: 1.2px;
   }
+
+  /* FAB ajustado para o novo tamanho do painel */
+  .fab {
+    right: calc(50% - 332px);
+    width: 56px; height: 56px;
+  }
+
+  /* Cabeçalho com tamanho maior no desktop */
+  .cabecalho { padding: 16px 22px 12px; }
+  .cabecalho-titulo { font-size: 17px; }
+
+  /* Cards de produto um pouco maiores no desktop */
+  .produto-card { padding: 14px 18px !important; }
+  .produto-nome { font-size: 14px !important; }
+  .preco-valor { font-size: 17px !important; }
+  .produto-icone { width: 44px !important; height: 44px !important; font-size: 22px !important; }
 }
+
 @media (min-width: 1200px) {
-  .tela { max-width: 600px; }
-  .fab { right: calc(50% - 272px); }
+  .tela { max-width: 780px; }
+  .fab { right: calc(50% - 362px); }
 }
 
 /* ── COMPATIBILIDADE COM CLASSES EXISTENTES NO HTML ────────── */
