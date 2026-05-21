@@ -1364,3 +1364,329 @@ body::after {
   text-transform: uppercase;
   cursor: pointer;
 }
+
+/* ════════════════════════════════════════════════════════════
+   COMPATIBILIDADE COM CLASSES GERADAS PELO APP.JS
+   (mapeia as classes que o JavaScript renderiza)
+   ════════════════════════════════════════════════════════════ */
+
+/* ── INÍCIO ──────────────────────────────────────────────── */
+.inicio-saudacao {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  color: var(--o1);
+  margin-bottom: 22px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.inicio-saudacao strong {
+  color: var(--o2);
+  font-weight: 700;
+}
+.inicio-secao {
+  margin-bottom: 24px;
+}
+.inicio-secao-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--o0);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inicio-secao-titulo::before {
+  content: '';
+  width: 3px; height: 14px;
+  background: var(--go);
+  border-radius: 2px;
+}
+
+/* Grid de categorias do início */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gap-cards);
+}
+.cat-card {
+  background: var(--gc);
+  border: 1px solid var(--ol);
+  border-radius: var(--r);
+  padding: 18px 12px;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--sv);
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.cat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--go);
+  opacity: .45;
+}
+.cat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ob);
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
+}
+.cat-card:active { transform: scale(.98); }
+.cat-card-icone {
+  font-size: 30px;
+  margin-bottom: 8px;
+  display: block;
+}
+.cat-card-nome {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--creme);
+  margin-bottom: 4px;
+}
+.cat-card-num {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--o1);
+}
+.cat-card-total {
+  background: linear-gradient(145deg, rgba(200,150,12,.18) 0%, rgba(200,150,12,.06) 100%);
+  border-color: var(--ob);
+}
+.cat-card-total .cat-card-num { color: var(--o2); }
+
+/* ── DETALHE ─────────────────────────────────────────────── */
+.detalhe-hero {
+  background: var(--gc);
+  border: 1px solid var(--ol);
+  border-radius: var(--r);
+  padding: 24px 16px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--sv);
+  margin-bottom: var(--gap-stack);
+}
+.detalhe-hero::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--go);
+  opacity: .55;
+}
+.detalhe-icone {
+  font-size: 38px;
+  margin-bottom: 10px;
+}
+.detalhe-nome {
+  font-family: 'Cinzel', serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--creme);
+  margin-bottom: 4px;
+}
+.detalhe-cat {
+  font-size: 11px;
+  color: var(--o0);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.detalhe-codigo {
+  font-size: 12px;
+  color: var(--c2);
+  font-weight: 500;
+}
+
+/* Grid de preços (compra/venda) */
+.preco-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap-cards);
+  margin-bottom: var(--gap-stack);
+}
+.preco-box {
+  background: var(--gc);
+  border: 1px solid var(--ol);
+  border-radius: var(--r);
+  padding: 16px 12px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.preco-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--go);
+  opacity: .35;
+}
+.preco-box-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  color: var(--o0);
+}
+.preco-box-valor {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+.cor-compra { color: #ee7d6f !important; }
+.cor-venda  { color: var(--o1) !important; }
+
+/* Barra de margem */
+.margem-box {
+  background: var(--gc);
+  border: 1px solid var(--ol);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--c1);
+  margin-bottom: var(--gap-stack);
+}
+.margem-box strong {
+  font-family: 'Cinzel', serif;
+  color: var(--o1);
+  font-weight: 700;
+}
+
+/* Bloco de metadados */
+.meta-bloco {
+  background: var(--gc);
+  border: 1px solid var(--ol);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: var(--gap-stack);
+}
+.meta-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ol);
+  font-size: 13px;
+}
+.meta-chave {
+  color: var(--c2);
+  font-weight: 600;
+}
+.meta-valor {
+  color: var(--creme);
+  font-weight: 600;
+}
+
+/* Bloco de histórico */
+.hist-bloco {
+  background: var(--gc);
+  border: 1px solid var(--ol);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: var(--gap-stack);
+}
+.hist-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--o0);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 14px 16px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--ol);
+}
+.hist-titulo::before {
+  content: '';
+  width: 3px; height: 12px;
+  background: var(--go);
+  border-radius: 2px;
+}
+.hist-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ol);
+  font-size: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hist-linha:last-child { border: none; }
+.hist-data {
+  color: var(--c2);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.hist-vals {
+  display: flex;
+  gap: 8px;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  flex: 1;
+  justify-content: center;
+}
+.hist-por {
+  color: var(--c2);
+  font-size: 11px;
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+/* Botão editar (admin) */
+.btn-editar {
+  width: 100%;
+  background: var(--go);
+  color: var(--v1);
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(200,150,12,.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity .2s, transform .1s;
+  margin-top: 4px;
+}
+.btn-editar:hover { opacity: .9; }
+.btn-editar:active { transform: scale(.98); }
+
+/* ── FIX: cabeçalho-titulo não pode ser flex (quebra layout do título "Produtos") */
+.cabecalho-titulo {
+  font-size: 15px;
+  display: inline-block;
+  flex: 1;
+}
+
+/* Ajuste: produto-card precisa preservar texto na largura correta */
+.produto-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.produto-nome {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fix: badge dentro do cabeçalho com tamanho menor */
+.cabecalho .badge {
+  font-size: 9px;
+  padding: 3px 8px;
+}
