@@ -1777,3 +1777,25 @@ body::after {
 .inicio-corpo .produto-card {
   margin-bottom: 8px;
 }
+
+/* ════════════════════════════════════════════════════════════
+   FIX CRÍTICO FINAL — Toast oculto + scroll completo
+   ════════════════════════════════════════════════════════════ */
+
+/* FIX 1: Toast deve ficar INVISÍVEL por padrão.
+   Só aparece quando o JavaScript adiciona a classe .visivel */
+.toast {
+  display: none !important;
+}
+.toast.visivel {
+  display: block !important;
+  animation: slideUpToast .3s ease-out;
+}
+
+/* FIX 2: Espaço inferior maior para a rolagem mostrar todo o conteúdo */
+.inicio-corpo,
+.detalhe-corpo,
+.editar-corpo,
+.produto-lista {
+  padding-bottom: calc(140px + var(--safe-bot)) !important;
+}
