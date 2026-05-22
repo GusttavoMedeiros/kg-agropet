@@ -41,7 +41,7 @@ const supabase = {
       // Normalizar: remover acentos + minúsculas
       const termoLimpo = filtros.busca
         .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim();
 
@@ -176,7 +176,7 @@ const supabase = {
     if (filtros.busca) {
       const termoLimpo = filtros.busca
         .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim();
       const palavras = termoLimpo.split(/\s+/).filter(p => p.length > 0);
