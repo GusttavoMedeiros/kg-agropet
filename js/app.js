@@ -14,6 +14,7 @@ let estado = {
   carregandoMais: false,
   temMais: true,
   contagemCats: {},
+  requisicaoBuscaId: 0,
 };
 
 const POR_PAGINA = 50;
@@ -65,6 +66,36 @@ function formatarData(isoStr) {
 function calcularMargem(compra, venda) {
   if (!compra || compra === 0) return 0;
   return (((venda - compra) / compra) * 100).toFixed(1);
+}
+
+function escaparHTML(valor) {
+  return String(valor ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function textoSeguro(valor, fallback = '—') {
+  const texto = String(valor ?? '').trim();
+  return texto ? escaparHTML(texto) : fallback;
+}
+
+function argJS(valor) {
+  return JSON.stringify(String(valor ?? ''))
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function exigirAdmin() {
+  if (estado.tipo === 'admin') return true;
+  mostrarToast('Apenas administradores podem alterar produtos.');
+  return false;
 }
 
 // ─── RECENTES (localStorage) ───────────────────
@@ -305,11 +336,11 @@ function renderizarInicio() {
     <div class="inicio-secao">
       <div class="inicio-secao-titulo">🕐 Vistos recentemente</div>
       ${recentes.map(p => `
-        <div class="produto-card" onclick="abrirDetalhe('${p.id}')">
+        <div class="produto-card" onclick="abrirDetalhe(${argJS(p.id)})">
           <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
           <div class="produto-info">
-            <div class="produto-nome">${p.nome}</div>
-            <div class="produto-cat">${p.categoria} · ${p.codigo || '—'}</div>
+            <div class="produto-nome">${textoSeguro(p.nome)}</div>
+            <div class="produto-cat">${textoSeguro(p.categoria)} · ${textoSeguro(p.codigo)}</div>
           </div>
           <div class="produto-preco">
             <div class="preco-label">VENDA</div>
@@ -332,9 +363,9 @@ function renderizarInicio() {
           <div class="cat-card-num">${totalGeral || '—'}</div>
         </div>
         ${CATEGORIAS.map(c => `
-          <div class="cat-card" onclick="irParaBusca('${c}')">
+          <div class="cat-card" onclick="irParaBusca(${argJS(c)})">
             <div class="cat-card-icone">${ICONES_CAT[c]}</div>
-            <div class="cat-card-nome">${c}</div>
+            <div class="cat-card-nome">${escaparHTML(c)}</div>
             <div class="cat-card-num">${estado.contagemCats[c] || 0}</div>
           </div>
         `).join('')}
@@ -344,7 +375,7 @@ function renderizarInicio() {
 
   cont.innerHTML = `
     <div class="inicio-saudacao">
-      ${saudacao()}, <strong>${estado.usuario?.usuario || 'usuário'}</strong>! 🌿
+      ${saudacao()}, <strong>${textoSeguro(estado.usuario?.usuario, 'usuário')}</strong>! 🌿
     </div>
     ${blocoRecentes}
     ${blocoCats}
@@ -394,10 +425,10 @@ function montarCategorias() {
     const num = c === 'Todos'
       ? Object.values(estado.contagemCats).reduce((a, b) => a + b, 0)
       : (estado.contagemCats[c] || 0);
-    const label = num > 0 ? `${c} <span class="cat-num">(${num})</span>` : c;
+    const label = num > 0 ? `${escaparHTML(c)} <span class="cat-num">(${num})</span>` : escaparHTML(c);
     return `<button class="cat-pill ${c === estado.categoriaAtiva ? 'ativa' : ''}"
       data-cat="${c}"
-      onclick="selecionarCategoria('${c}')">${label}</button>`;
+      onclick="selecionarCategoria(${argJS(c)})">${label}</button>`;
   }).join('');
 }
 
@@ -422,6 +453,7 @@ async function resetarECarregar() {
 async function carregarMaisProdutos() {
   if (estado.carregandoMais || !estado.temMais) return;
   estado.carregandoMais = true;
+  const requisicaoAtual = ++estado.requisicaoBuscaId;
 
   try {
     const busca = document.getElementById('inp-busca').value.trim();
@@ -435,6 +467,7 @@ async function carregarMaisProdutos() {
     };
     // getProdutosComAbort cancela requisições antigas automaticamente (AbortController)
     const novos = await supabase.getProdutosComAbort(filtros);
+    if (requisicaoAtual !== estado.requisicaoBuscaId) return;
     if (!novos || novos.length < POR_PAGINA) estado.temMais = false;
     estado.produtos = [...estado.produtos, ...novos];
     estado.pagina++;
@@ -442,13 +475,16 @@ async function carregarMaisProdutos() {
   } catch (e) {
     // AbortError é intencional (nova busca cancelou a anterior) — ignora silenciosamente
     if (e.name === 'AbortError') return;
+    if (requisicaoAtual !== estado.requisicaoBuscaId) return;
     if (estado.produtos.length === 0) {
       document.getElementById('produto-lista').innerHTML =
         '<div class="lista-vazia">⚠️ Erro ao carregar.<br>Verifique sua conexão.</div>';
     }
     console.error(e);
   } finally {
-    estado.carregandoMais = false;
+    if (requisicaoAtual === estado.requisicaoBuscaId) {
+      estado.carregandoMais = false;
+    }
   }
 }
 
@@ -468,6 +504,12 @@ function renderizarProdutos(produtos, manterScroll = false) {
   const lista = document.getElementById('produto-lista');
   const scrollAntes = lista.scrollTop;
 
+  // Desconectar observer anterior antes de renderizar nova lista.
+  if (window._sentinelObserver) {
+    window._sentinelObserver.disconnect();
+    window._sentinelObserver = null;
+  }
+
   if (!produtos || produtos.length === 0) {
     lista.innerHTML = '<div class="lista-vazia">Nenhum produto encontrado.<br>Use o + para cadastrar.</div>';
     return;
@@ -481,11 +523,11 @@ function renderizarProdutos(produtos, manterScroll = false) {
   lista.innerHTML = ordenados.map(p => {
     const mg = indicadorMargem(p.preco_compra, p.preco_venda);
     return `
-    <div class="produto-card" onclick="abrirDetalhe('${p.id}')" role="listitem">
+    <div class="produto-card" onclick="abrirDetalhe(${argJS(p.id)})" role="listitem">
       <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
       <div class="produto-info">
-        <div class="produto-nome">${p.nome}</div>
-        <div class="produto-cat">${p.categoria} · ${p.codigo || '—'}</div>
+        <div class="produto-nome">${textoSeguro(p.nome)}</div>
+        <div class="produto-cat">${textoSeguro(p.categoria)} · ${textoSeguro(p.codigo)}</div>
       </div>
       <div class="produto-preco">
         <div class="preco-label">VENDA</div>
@@ -496,12 +538,6 @@ function renderizarProdutos(produtos, manterScroll = false) {
   `}).join('') + rodape;
 
   if (manterScroll) lista.scrollTop = scrollAntes;
-
-  // Desconectar observer anterior antes de criar novo (evita acúmulo em memória)
-  if (window._sentinelObserver) {
-    window._sentinelObserver.disconnect();
-    window._sentinelObserver = null;
-  }
 
   const sentinel = document.getElementById('sentinel');
   if (sentinel) {
@@ -618,10 +654,10 @@ function mostrarSugestoes() {
   }
 
   cont.innerHTML = sugs.map(s => `
-    <div class="sugestao-item" onclick="aplicarSugestao('${s.id}', \`${s.nome.replace(/`/g, "\\`")}\`)">
+    <div class="sugestao-item" onclick="aplicarSugestao(${argJS(s.id)}, ${argJS(s.nome)})">
       <span class="sugestao-icone">🔍</span>
-      <span class="sugestao-texto">${s.nome}</span>
-      <span class="sugestao-codigo">${s.codigo}</span>
+      <span class="sugestao-texto">${textoSeguro(s.nome)}</span>
+      <span class="sugestao-codigo">${textoSeguro(s.codigo, '')}</span>
     </div>
   `).join('');
   cont.style.display = 'block';
@@ -694,7 +730,7 @@ async function abrirDetalhe(id) {
               <span class="cor-compra">C: ${formatarMoeda(h.preco_compra)}</span>
               <span class="cor-venda">V: ${formatarMoeda(h.preco_venda)}</span>
             </span>
-            <span class="hist-por">${h.alterado_por || '—'}</span>
+            <span class="hist-por">${textoSeguro(h.alterado_por)}</span>
           </div>
         `).join('')}
       </div>
@@ -703,9 +739,9 @@ async function abrirDetalhe(id) {
     corpo.innerHTML = `
       <div class="detalhe-hero">
         <div class="detalhe-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
-        <div class="detalhe-nome">${p.nome}</div>
-        <div class="detalhe-cat">${p.categoria}</div>
-        <div class="detalhe-codigo">Código: ${p.codigo || '—'}</div>
+        <div class="detalhe-nome">${textoSeguro(p.nome)}</div>
+        <div class="detalhe-cat">${textoSeguro(p.categoria)}</div>
+        <div class="detalhe-codigo">Código: ${textoSeguro(p.codigo)}</div>
       </div>
       <div class="preco-grid">
         <div class="preco-box">
@@ -724,7 +760,7 @@ async function abrirDetalhe(id) {
       <div class="meta-bloco">
         <div class="meta-linha">
           <span class="meta-chave">Categoria</span>
-          <span class="meta-valor">${p.categoria}</span>
+          <span class="meta-valor">${textoSeguro(p.categoria)}</span>
         </div>
         <div class="meta-linha">
           <span class="meta-chave">Última atualização</span>
@@ -732,12 +768,12 @@ async function abrirDetalhe(id) {
         </div>
         <div class="meta-linha" style="border:none">
           <span class="meta-chave">Atualizado por</span>
-          <span class="meta-valor">${p.atualizado_por || '—'}</span>
+          <span class="meta-valor">${textoSeguro(p.atualizado_por)}</span>
         </div>
       </div>
       ${blocoHistorico}
       ${isAdmin ? `
-        <button class="btn-editar" onclick="abrirEdicao('${p.id}')">
+        <button class="btn-editar" onclick="abrirEdicao(${argJS(p.id)})">
           ✏️ Editar preços
         </button>
       ` : ''}
@@ -753,11 +789,12 @@ async function abrirDetalhe(id) {
 function preencherSelectCategoria(valorAtual = '') {
   const sel = document.getElementById('edit-categoria');
   sel.innerHTML = CATEGORIAS.map(c =>
-    `<option value="${c}" ${c === valorAtual ? 'selected' : ''}>${c}</option>`
+    `<option value="${escaparHTML(c)}" ${c === valorAtual ? 'selected' : ''}>${escaparHTML(c)}</option>`
   ).join('');
 }
 
 function abrirCadastro() {
+  if (!exigirAdmin()) return;
   document.getElementById('edit-id').value = '';
   document.getElementById('edit-nome').value = '';
   document.getElementById('edit-codigo').value = '';
@@ -772,6 +809,7 @@ function abrirCadastro() {
 }
 
 function abrirEdicao(id) {
+  if (!exigirAdmin()) return;
   const p = estado.produtoAtual;
   if (!p) return;
   document.getElementById('edit-id').value = p.id;
@@ -788,6 +826,7 @@ function abrirEdicao(id) {
 }
 
 async function salvarProduto() {
+  if (!exigirAdmin()) return;
   const id      = document.getElementById('edit-id').value;
   const nome    = document.getElementById('edit-nome').value.trim();
   const codigo  = document.getElementById('edit-codigo').value.trim();
@@ -904,6 +943,7 @@ async function salvarProduto() {
 }
 
 async function deletarProduto() {
+  if (!exigirAdmin()) return;
   const id = document.getElementById('edit-id').value;
   if (!id) return;
   if (!confirm('Deseja excluir este produto? Esta ação não pode ser desfeita.')) return;
