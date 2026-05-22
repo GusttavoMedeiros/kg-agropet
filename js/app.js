@@ -92,6 +92,10 @@ function argJS(valor) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function argAtributoJS(valor) {
+  return escaparHTML(argJS(valor));
+}
+
 function exigirAdmin() {
   if (estado.tipo === 'admin') return true;
   mostrarToast('Apenas administradores podem alterar produtos.');
@@ -336,7 +340,7 @@ function renderizarInicio() {
     <div class="inicio-secao">
       <div class="inicio-secao-titulo">🕐 Vistos recentemente</div>
       ${recentes.map(p => `
-        <div class="produto-card" onclick="abrirDetalhe(${argJS(p.id)})">
+        <div class="produto-card" onclick="abrirDetalhe(${argAtributoJS(p.id)})">
           <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
           <div class="produto-info">
             <div class="produto-nome">${textoSeguro(p.nome)}</div>
@@ -363,7 +367,7 @@ function renderizarInicio() {
           <div class="cat-card-num">${totalGeral || '—'}</div>
         </div>
         ${CATEGORIAS.map(c => `
-          <div class="cat-card" onclick="irParaBusca(${argJS(c)})">
+          <div class="cat-card" onclick="irParaBusca(${argAtributoJS(c)})">
             <div class="cat-card-icone">${ICONES_CAT[c]}</div>
             <div class="cat-card-nome">${escaparHTML(c)}</div>
             <div class="cat-card-num">${estado.contagemCats[c] || 0}</div>
@@ -427,8 +431,8 @@ function montarCategorias() {
       : (estado.contagemCats[c] || 0);
     const label = num > 0 ? `${escaparHTML(c)} <span class="cat-num">(${num})</span>` : escaparHTML(c);
     return `<button class="cat-pill ${c === estado.categoriaAtiva ? 'ativa' : ''}"
-      data-cat="${c}"
-      onclick="selecionarCategoria(${argJS(c)})">${label}</button>`;
+      data-cat="${escaparHTML(c)}"
+      onclick="selecionarCategoria(${argAtributoJS(c)})">${label}</button>`;
   }).join('');
 }
 
@@ -523,7 +527,7 @@ function renderizarProdutos(produtos, manterScroll = false) {
   lista.innerHTML = ordenados.map(p => {
     const mg = indicadorMargem(p.preco_compra, p.preco_venda);
     return `
-    <div class="produto-card" onclick="abrirDetalhe(${argJS(p.id)})" role="listitem">
+    <div class="produto-card" onclick="abrirDetalhe(${argAtributoJS(p.id)})" role="listitem">
       <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
       <div class="produto-info">
         <div class="produto-nome">${textoSeguro(p.nome)}</div>
@@ -654,7 +658,7 @@ function mostrarSugestoes() {
   }
 
   cont.innerHTML = sugs.map(s => `
-    <div class="sugestao-item" onclick="aplicarSugestao(${argJS(s.id)}, ${argJS(s.nome)})">
+    <div class="sugestao-item" onclick="aplicarSugestao(${argAtributoJS(s.id)}, ${argAtributoJS(s.nome)})">
       <span class="sugestao-icone">🔍</span>
       <span class="sugestao-texto">${textoSeguro(s.nome)}</span>
       <span class="sugestao-codigo">${textoSeguro(s.codigo, '')}</span>
@@ -773,7 +777,7 @@ async function abrirDetalhe(id) {
       </div>
       ${blocoHistorico}
       ${isAdmin ? `
-        <button class="btn-editar" onclick="abrirEdicao(${argJS(p.id)})">
+        <button class="btn-editar" onclick="abrirEdicao(${argAtributoJS(p.id)})">
           ✏️ Editar preços
         </button>
       ` : ''}
