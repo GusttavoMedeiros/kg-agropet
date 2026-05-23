@@ -1692,6 +1692,12 @@ body::after {
   font-style: italic;
   flex-shrink: 0;
 }
+.hist-vazia {
+  color: var(--c2);
+  justify-content: center;
+  text-align: center;
+  font-style: italic;
+}
 
 /* Botão editar (admin) */
 .btn-editar {
@@ -1882,4 +1888,46 @@ body::after {
 .detalhe-cat,
 .detalhe-codigo {
   line-height: 1.35 !important;
+}
+
+/* FIX: informações e histórico não podem virar uma barrinha vazia. */
+.detalhe-corpo > * {
+  flex-shrink: 0 !important;
+}
+.preco-grid,
+.margem-box,
+.btn-editar {
+  flex-shrink: 0 !important;
+}
+.meta-bloco,
+.hist-bloco {
+  display: block !important;
+  flex-shrink: 0 !important;
+  height: auto !important;
+  min-height: 44px !important;
+  overflow: visible !important;
+  margin-bottom: var(--gap-stack) !important;
+}
+.meta-linha,
+.hist-linha {
+  display: flex !important;
+  min-height: 44px !important;
+  height: auto !important;
+  padding: 12px 16px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.meta-chave,
+.meta-valor,
+.hist-titulo,
+.hist-data,
+.hist-vals,
+.hist-por,
+.hist-vazia {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.hist-titulo {
+  display: flex !important;
+  min-height: 42px !important;
 }
