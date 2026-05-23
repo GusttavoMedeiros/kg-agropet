@@ -1734,7 +1734,7 @@ body::after {
 .tela.ativa {
   display: flex !important;
 }
-.tela:not(.ativa) * {
+.tela:not(.ativa) {
   visibility: hidden;
   pointer-events: none;
 }
