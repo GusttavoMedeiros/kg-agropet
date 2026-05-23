@@ -743,7 +743,7 @@ async function abrirDetalhe(id) {
     corpo.innerHTML = `
       <div class="detalhe-hero">
         <div class="detalhe-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
-        <div class="detalhe-nome">${textoSeguro(p.nome)}</div>
+        <div class="detalhe-nome">${textoSeguro(p.nome, 'Produto sem nome')}</div>
         <div class="detalhe-cat">${textoSeguro(p.categoria)}</div>
         <div class="detalhe-codigo">Código: ${textoSeguro(p.codigo)}</div>
       </div>
