@@ -723,11 +723,22 @@ async function abrirDetalhe(id) {
     const isAdmin = estado.tipo === 'admin';
 
     // Histórico de preços
-    const historico = await supabase.getHistorico(id);
-    const blocoHistorico = historico && historico.length > 0 ? `
+    let historico = [];
+    let erroHistorico = false;
+    try {
+      historico = await supabase.getHistorico(id);
+    } catch (e) {
+      erroHistorico = true;
+      console.warn('Erro ao carregar histórico:', e);
+    }
+    const blocoHistorico = `
       <div class="hist-bloco">
         <div class="hist-titulo">📊 Histórico de preços</div>
-        ${historico.map(h => `
+        ${erroHistorico ? `
+          <div class="hist-linha hist-vazia">
+            Não foi possível carregar o histórico agora.
+          </div>
+        ` : historico && historico.length > 0 ? historico.map(h => `
           <div class="hist-linha">
             <span class="hist-data">${formatarData(h.alterado_em)}</span>
             <span class="hist-vals">
@@ -736,9 +747,13 @@ async function abrirDetalhe(id) {
             </span>
             <span class="hist-por">${textoSeguro(h.alterado_por)}</span>
           </div>
-        `).join('')}
+        `).join('') : `
+          <div class="hist-linha hist-vazia">
+            Este produto ainda não possui alterações de preço registradas.
+          </div>
+        `}
       </div>
-    ` : '';
+    `;
 
     corpo.innerHTML = `
       <div class="detalhe-hero">
