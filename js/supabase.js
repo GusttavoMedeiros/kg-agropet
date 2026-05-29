@@ -105,9 +105,11 @@ const supabase = {
   },
 
   // Buscar usuário
+  // OBS: usuário é case-insensitive (ilike) → aceita "Admin", "admin", "ADMIN".
+  //      A senha continua exata (eq) por segurança.
   async getUsuario(usuario, senha) {
     const data = await this.request(
-      `usuarios?usuario=eq.${encodeURIComponent(usuario)}&senha=eq.${encodeURIComponent(senha)}&select=*`
+      `usuarios?usuario=ilike.${encodeURIComponent(usuario)}&senha=eq.${encodeURIComponent(senha)}&select=*`
     );
     return data[0] || null;
   },
