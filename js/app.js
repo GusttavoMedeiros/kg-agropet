@@ -50,6 +50,51 @@ function mostrarToast(msg) {
   setTimeout(() => t.classList.remove('visivel'), 2500);
 }
 
+// Modal de confirmação customizado (substitui o confirm() nativo do navegador).
+// Mantém a identidade visual do app. Retorna uma Promise<boolean>.
+function confirmarAcao(titulo, mensagem, opcoes = {}) {
+  const textoConfirmar = opcoes.confirmar || 'Confirmar';
+  const perigo = opcoes.perigo === true;
+
+  return new Promise(resolve => {
+    // Remove qualquer modal de confirmação anterior
+    const anterior = document.getElementById('modal-confirmacao-dinamico');
+    if (anterior) anterior.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'modal-confirmacao-dinamico';
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+
+    // Botão de confirmar fica vermelho quando é ação destrutiva (perigo)
+    const estiloConfirma = perigo
+      ? 'style="background:#c0392b;color:#fff"'
+      : '';
+
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <div class="modal-titulo">${escaparHTML(titulo)}</div>
+        <div class="modal-sub">${escaparHTML(mensagem)}</div>
+        <div class="modal-btns">
+          <button class="modal-btn-cancel" id="mcd-cancelar">Cancelar</button>
+          <button class="modal-btn-confirm" id="mcd-confirmar" ${estiloConfirma}>${escaparHTML(textoConfirmar)}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const fechar = (resultado) => {
+      overlay.remove();
+      resolve(resultado);
+    };
+
+    document.getElementById('mcd-cancelar').onclick = () => fechar(false);
+    document.getElementById('mcd-confirmar').onclick = () => fechar(true);
+    // Clicar fora do modal cancela
+    overlay.onclick = (e) => { if (e.target === overlay) fechar(false); };
+  });
+}
+
 function formatarMoeda(val) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL'
@@ -686,7 +731,12 @@ function filtrarProdutos() {
   const btn = document.getElementById('btn-limpar-busca');
   if (btn) btn.style.display = inp.value.length > 0 ? 'flex' : 'none';
 
-  mostrarSugestoes();
+  // Debounce leve nas sugestões: evita rodar a busca fuzzy (Levenshtein)
+  // a cada tecla digitada. Espera 120ms de pausa antes de calcular.
+  clearTimeout(window._sugestoesTimer);
+  window._sugestoesTimer = setTimeout(mostrarSugestoes, 120);
+
+  // Debounce maior na busca ao servidor (evita request a cada tecla)
   clearTimeout(window._filtroTimer);
   window._filtroTimer = setTimeout(resetarECarregar, 400);
 }
@@ -965,7 +1015,13 @@ async function deletarProduto() {
   if (!exigirAdmin()) return;
   const id = document.getElementById('edit-id').value;
   if (!id) return;
-  if (!confirm('Deseja excluir este produto? Esta ação não pode ser desfeita.')) return;
+
+  const confirmado = await confirmarAcao(
+    'Excluir produto?',
+    'Esta ação não pode ser desfeita.',
+    { confirmar: 'Excluir', perigo: true }
+  );
+  if (!confirmado) return;
 
   try {
     await supabase.deletarProduto(id);
@@ -985,7 +1041,7 @@ async function deletarProduto() {
 
     await carregarTelaInicio();
   } catch (e) {
-    alert('Erro ao excluir. Tente novamente.');
+    mostrarToast('⚠️ Erro ao excluir. Tente novamente.');
     console.error(e);
   }
 }

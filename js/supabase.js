@@ -27,16 +27,20 @@ const supabase = {
     return res.status === 204 ? null : res.json();
   },
 
-  // Buscar produtos com paginação
-  async getProdutos(filtros = {}) {
+  // ─── Monta a query de busca de produtos (compartilhada) ───
+  // Centraliza a lógica de filtros/ordenação/busca usada por
+  // getProdutos e getProdutosComAbort (evita código duplicado).
+  _montarQueryProdutos(filtros = {}) {
     const limit  = filtros.limit  || 50;
     const offset = filtros.offset || 0;
-    const dir = filtros.direcao === 'desc' ? 'desc' : 'asc';
-    const ordem = filtros.ordenacao === 'codigo' ? `codigo.${dir}` : `nome.${dir}`;
+    const dir    = filtros.direcao === 'desc' ? 'desc' : 'asc';
+    const ordem  = filtros.ordenacao === 'codigo' ? `codigo.${dir}` : `nome.${dir}`;
     let query = `produtos?select=*&limit=${limit}&offset=${offset}&order=${ordem}`;
+
     if (filtros.categoria && filtros.categoria !== 'Todos') {
       query += `&categoria=eq.${encodeURIComponent(filtros.categoria)}`;
     }
+
     if (filtros.busca) {
       // Normalizar: remover acentos + minúsculas
       const termoLimpo = filtros.busca
@@ -45,16 +49,14 @@ const supabase = {
         .toLowerCase()
         .trim();
 
-      // Quebrar em palavras
       const palavras = termoLimpo.split(/\s+/).filter(p => p.length > 0);
 
-      // Escapar caracteres especiais do PostgREST
-      // ( ) , * \ . têm significado especial na sintaxe
+      // Escapar caracteres especiais do PostgREST: ( ) , * \
       const esc = (s) => encodeURIComponent(s.replace(/[(),*\\]/g, ''));
 
       if (palavras.length === 1) {
-        // Uma palavra: busca no nome_busca OU no código (com %2A para wildcard)
-        const p = esc(palavras[0]);
+        // Uma palavra: busca no nome_busca OU no código
+        const p   = esc(palavras[0]);
         const cod = esc(termoLimpo);
         query += `&or=(nome_busca.ilike.%2A${p}%2A,codigo.ilike.%2A${cod}%2A)`;
       } else {
@@ -64,7 +66,12 @@ const supabase = {
         });
       }
     }
-    return this.request(query);
+    return query;
+  },
+
+  // Buscar produtos com paginação
+  async getProdutos(filtros = {}) {
+    return this.request(this._montarQueryProdutos(filtros));
   },
 
   // Buscar produto por código exato (para validação de duplicidade)
@@ -166,33 +173,8 @@ const supabase = {
     this._abortController = new AbortController();
     const signal = this._abortController.signal;
 
-    const limit  = filtros.limit  || 50;
-    const offset = filtros.offset || 0;
-    const dir    = filtros.direcao === 'desc' ? 'desc' : 'asc';
-    const ordem  = filtros.ordenacao === 'codigo' ? `codigo.${dir}` : `nome.${dir}`;
-    let query = `produtos?select=*&limit=${limit}&offset=${offset}&order=${ordem}`;
-
-    if (filtros.categoria && filtros.categoria !== 'Todos') {
-      query += `&categoria=eq.${encodeURIComponent(filtros.categoria)}`;
-    }
-    if (filtros.busca) {
-      const termoLimpo = filtros.busca
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim();
-      const palavras = termoLimpo.split(/\s+/).filter(p => p.length > 0);
-      const esc = (s) => encodeURIComponent(s.replace(/[(),*\\]/g, ''));
-      if (palavras.length === 1) {
-        const p   = esc(palavras[0]);
-        const cod = esc(termoLimpo);
-        query += `&or=(nome_busca.ilike.%2A${p}%2A,codigo.ilike.%2A${cod}%2A)`;
-      } else {
-        palavras.forEach(p => {
-          query += `&nome_busca=ilike.%2A${esc(p)}%2A`;
-        });
-      }
-    }
+    // Usa a mesma lógica de montagem de query (sem duplicar código)
+    const query = this._montarQueryProdutos(filtros);
 
     // Passa o signal do AbortController para o fetch
     const res = await fetch(`${this.url}/rest/v1/${query}`, {
