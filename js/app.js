@@ -26,15 +26,22 @@ const CATEGORIAS = [
 ];
 
 const ICONES_CAT = {
-  'Ração':          '🐾',
-  'Veterinário':    '💉',
-  'Sementes':       '🌱',
-  'Defensivos':     '💧',
-  'Pet':            '🐶',
-  'Higiene Animal': '🧴',
-  'Acessórios':     '🔧',
-  'Outros':         '📦',
+  'Ração':          'ic-cat-racao',
+  'Veterinário':    'ic-cat-vet',
+  'Sementes':       'ic-cat-sementes',
+  'Defensivos':     'ic-cat-defensivos',
+  'Pet':            'ic-cat-pet',
+  'Higiene Animal': 'ic-cat-higiene',
+  'Acessórios':     'ic-cat-acessorios',
+  'Outros':         'ic-cat-outros',
 };
+
+// Gera o markup SVG de um ícone de categoria.
+// Recebe o nome da categoria e devolve o <svg> pronto (com fallback "Outros").
+function iconeCat(categoria, classe = 'ic-cat') {
+  const id = ICONES_CAT[categoria] || 'ic-cat-outros';
+  return `<svg class="${classe}" aria-hidden="true"><use href="#${id}"/></svg>`;
+}
 
 // ─── UTILIDADES ────────────────────────────────
 
@@ -234,18 +241,18 @@ function atualizarTextosOrdenacao() {
 
   if (btnAz) {
     btnAz.innerHTML = estado.ordenacao === 'az'
-      ? `<span class="ord-icon">🔤</span> ${dir === 'asc' ? 'A — Z' : 'Z — A'}`
-      : `<span class="ord-icon">🔤</span> A — Z`;
+      ? `<svg class="ic-sm" aria-hidden="true"><use href="#ic-az"/></svg> ${dir === 'asc' ? 'A — Z' : 'Z — A'}`
+      : `<svg class="ic-sm" aria-hidden="true"><use href="#ic-az"/></svg> A — Z`;
   }
   if (btnCod) {
     btnCod.innerHTML = estado.ordenacao === 'codigo'
-      ? `<span class="ord-icon">🔢</span> Cód. ${seta}`
-      : `<span class="ord-icon">🔢</span> Cód. 001↑`;
+      ? `<svg class="ic-sm" aria-hidden="true"><use href="#ic-codigo"/></svg> Cód. ${seta}`
+      : `<svg class="ic-sm" aria-hidden="true"><use href="#ic-codigo"/></svg> Cód.`;
   }
   if (btnMg) {
     btnMg.innerHTML = estado.ordenacao === 'margem'
-      ? `<span class="ord-icon">📈</span> Margem ${seta}`
-      : `<span class="ord-icon">📈</span> Margem`;
+      ? `<svg class="ic-sm" aria-hidden="true"><use href="#ic-margem"/></svg> Margem ${seta}`
+      : `<svg class="ic-sm" aria-hidden="true"><use href="#ic-margem"/></svg> Margem`;
   }
 }
 
@@ -383,10 +390,10 @@ function renderizarInicio() {
 
   const blocoRecentes = recentes.length > 0 ? `
     <div class="inicio-secao">
-      <div class="inicio-secao-titulo">🕐 Vistos recentemente</div>
+      <div class="inicio-secao-titulo"><svg class="ic-secao" aria-hidden="true"><use href="#ic-busca"/></svg> Vistos recentemente</div>
       ${recentes.map(p => `
         <div class="produto-card" onclick="abrirDetalhe(${argAtributoJS(p.id)})">
-          <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
+          <div class="produto-icone">${iconeCat(p.categoria)}</div>
           <div class="produto-info">
             <div class="produto-nome">${textoSeguro(p.nome)}</div>
             <div class="produto-cat">${textoSeguro(p.categoria)} · ${textoSeguro(p.codigo)}</div>
@@ -404,16 +411,16 @@ function renderizarInicio() {
 
   const blocoCats = `
     <div class="inicio-secao">
-      <div class="inicio-secao-titulo">📦 Produtos por categoria</div>
+      <div class="inicio-secao-titulo"><svg class="ic-secao" aria-hidden="true"><use href="#ic-caixa"/></svg> Produtos por categoria</div>
       <div class="cat-grid">
         <div class="cat-card cat-card-total" onclick="irParaBusca('Todos')">
-          <div class="cat-card-icone">🏪</div>
+          <div class="cat-card-icone"><svg class="ic-cat" aria-hidden="true"><use href="#ic-loja"/></svg></div>
           <div class="cat-card-nome">Todos</div>
           <div class="cat-card-num">${totalGeral || '—'}</div>
         </div>
         ${CATEGORIAS.map(c => `
           <div class="cat-card" onclick="irParaBusca(${argAtributoJS(c)})">
-            <div class="cat-card-icone">${ICONES_CAT[c]}</div>
+            <div class="cat-card-icone">${iconeCat(c)}</div>
             <div class="cat-card-nome">${escaparHTML(c)}</div>
             <div class="cat-card-num">${estado.contagemCats[c] || 0}</div>
           </div>
@@ -573,7 +580,7 @@ function renderizarProdutos(produtos, manterScroll = false) {
     const mg = indicadorMargem(p.preco_compra, p.preco_venda);
     return `
     <div class="produto-card" onclick="abrirDetalhe(${argAtributoJS(p.id)})" role="listitem">
-      <div class="produto-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
+      <div class="produto-icone">${iconeCat(p.categoria)}</div>
       <div class="produto-info">
         <div class="produto-nome">${textoSeguro(p.nome)}</div>
         <div class="produto-cat">${textoSeguro(p.categoria)} · ${textoSeguro(p.codigo)}</div>
@@ -704,7 +711,7 @@ function mostrarSugestoes() {
 
   cont.innerHTML = sugs.map(s => `
     <div class="sugestao-item" onclick="aplicarSugestao(${argAtributoJS(s.id)}, ${argAtributoJS(s.nome)})">
-      <span class="sugestao-icone">🔍</span>
+      <span class="sugestao-icone"><svg class="ic" aria-hidden="true"><use href="#ic-busca"/></svg></span>
       <span class="sugestao-texto">${textoSeguro(s.nome)}</span>
       <span class="sugestao-codigo">${textoSeguro(s.codigo, '')}</span>
     </div>
@@ -783,7 +790,7 @@ async function abrirDetalhe(id) {
     }
     const blocoHistorico = `
       <div class="hist-bloco">
-        <div class="hist-titulo">📊 Histórico de preços</div>
+        <div class="hist-titulo"><svg class="ic-secao" aria-hidden="true"><use href="#ic-margem"/></svg> Histórico de preços</div>
         ${erroHistorico ? `
           <div class="hist-linha hist-vazia">
             Não foi possível carregar o histórico agora.
@@ -807,7 +814,7 @@ async function abrirDetalhe(id) {
 
     corpo.innerHTML = `
       <div class="detalhe-hero">
-        <div class="detalhe-icone">${ICONES_CAT[p.categoria] || '📦'}</div>
+        <div class="detalhe-icone">${iconeCat(p.categoria, 'ic-cat-grande')}</div>
         <div class="detalhe-nome">${textoSeguro(p.nome, 'Produto sem nome')}</div>
         <div class="detalhe-cat">${textoSeguro(p.categoria)}</div>
         <div class="detalhe-codigo">Código: ${textoSeguro(p.codigo)}</div>
@@ -927,7 +934,7 @@ async function salvarProduto() {
       if (existente && existente.id !== id) {
         erro.textContent = `⚠️ O código "${codigo}" já está em uso pelo produto "${existente.nome}".`;
         erro.style.display = 'block';
-        btnCheck.textContent = '💾 SALVAR';
+        btnCheck.innerHTML = `<svg class="ic-sm" aria-hidden="true"><use href="#ic-salvar"/></svg> SALVAR`;
         btnCheck.disabled = false;
         return;
       }
@@ -1006,7 +1013,7 @@ async function salvarProduto() {
     erro.style.display = 'block';
     console.error('Erro detalhado:', e);
   } finally {
-    btn.textContent = '💾 SALVAR';
+    btn.innerHTML = `<svg class="ic-sm" aria-hidden="true"><use href="#ic-salvar"/></svg> SALVAR`;
     btn.disabled = false;
   }
 }

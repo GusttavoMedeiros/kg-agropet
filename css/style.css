@@ -1931,3 +1931,211 @@ body::after {
   display: flex !important;
   min-height: 42px !important;
 }
+
+/* ════════════════════════════════════════════════════════════
+   POLISH v2 — Ícones SVG profissionais + micro-interações
+   ════════════════════════════════════════════════════════════ */
+
+/* ─── Sistema de ícones SVG ─── */
+.ic, .ic-sm, .ic-titulo, .ic-secao, .ic-fab,
+.ic-cat, .ic-cat-grande {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  color: currentColor;
+}
+.ic        { width: 20px; height: 20px; }
+.ic-sm     { width: 17px; height: 17px; }
+.ic-titulo { width: 20px; height: 20px; margin-right: 2px; }
+.ic-secao  { width: 15px; height: 15px; }
+.ic-fab    { width: 26px; height: 26px; }
+.ic-cat    { width: 30px; height: 30px; }
+.ic-cat-grande { width: 40px; height: 40px; }
+
+/* Botões com ícone: alinhar ícone + texto com gap */
+.tipo-btn, .ord-btn, .btn-primario, .btn-deletar,
+.cabecalho-titulo, .inicio-secao-titulo, .hist-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: center;
+}
+.cabecalho-titulo, .inicio-secao-titulo, .hist-titulo {
+  justify-content: flex-start;
+}
+
+/* Ícones nos cabeçalhos herdam o dourado */
+.cabecalho-titulo .ic-titulo { color: var(--o1); }
+.inicio-secao-titulo .ic-secao { color: var(--o0); }
+.hist-titulo .ic-secao { color: var(--o0); }
+
+/* Ícones de categoria nos cards: dourado suave */
+.produto-icone svg,
+.cat-card-icone svg,
+.detalhe-icone svg {
+  color: var(--o1);
+}
+
+/* Botão de ícone (lupa/sair no cabeçalho) */
+.btn-icone svg { color: var(--o1); }
+
+/* FAB com ícone branco-esverdeado */
+.fab .ic-fab { color: var(--v1); }
+
+/* Botão limpar busca (X) */
+.busca-limpar svg { color: #fff; width: 16px; height: 16px; }
+
+/* Botão voltar */
+.btn-voltar svg { color: var(--o1); }
+
+/* ─── Refinamento: hierarquia da seção de ordenação ─── */
+.inicio-secao-titulo {
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+/* ─── Micro-interações refinadas ─── */
+
+/* Transição suave universal em elementos interativos */
+.produto-card,
+.cat-card,
+.recente-card,
+.tipo-btn,
+.ord-btn,
+.btn-icone,
+.btn-voltar,
+.cat-pill,
+.fab,
+.btn-primario,
+.btn-deletar,
+.sugestao-item {
+  transition: transform .18s cubic-bezier(.34, 1.56, .64, 1),
+              background-color .18s ease,
+              border-color .18s ease,
+              box-shadow .18s ease;
+}
+
+/* Toque nos cards: leve afundamento + escala */
+.produto-card:active,
+.recente-card:active {
+  transform: scale(.985);
+  filter: brightness(1.05);
+}
+.cat-card:active {
+  transform: scale(.96);
+}
+
+/* Botões de ícone: feedback circular ao tocar */
+.btn-icone:active,
+.btn-voltar:active {
+  transform: scale(.9);
+  background: rgba(200,150,12,.22);
+}
+
+/* FAB: rotação sutil do + ao tocar */
+.fab:active {
+  transform: scale(.92) rotate(90deg);
+}
+.fab .ic-fab {
+  transition: transform .25s ease;
+}
+
+/* Chips de categoria: elevação ao ativar */
+.cat-pill {
+  position: relative;
+}
+.cat-pill.ativa {
+  transform: translateY(-1px);
+}
+
+/* ─── Entrada suave dos cards (stagger via animação) ─── */
+@keyframes cardEntra {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.produto-lista .produto-card {
+  animation: cardEntra .35s ease backwards;
+}
+.produto-lista .produto-card:nth-child(1)  { animation-delay: .02s; }
+.produto-lista .produto-card:nth-child(2)  { animation-delay: .04s; }
+.produto-lista .produto-card:nth-child(3)  { animation-delay: .06s; }
+.produto-lista .produto-card:nth-child(4)  { animation-delay: .08s; }
+.produto-lista .produto-card:nth-child(5)  { animation-delay: .10s; }
+.produto-lista .produto-card:nth-child(6)  { animation-delay: .12s; }
+.produto-lista .produto-card:nth-child(7)  { animation-delay: .14s; }
+.produto-lista .produto-card:nth-child(8)  { animation-delay: .16s; }
+.produto-lista .produto-card:nth-child(n+9) { animation-delay: .18s; }
+
+/* Cards de categoria entram com leve escala */
+@keyframes catEntra {
+  from { opacity: 0; transform: scale(.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.cat-grid .cat-card { animation: catEntra .3s ease backwards; }
+.cat-grid .cat-card:nth-child(1) { animation-delay: .03s; }
+.cat-grid .cat-card:nth-child(2) { animation-delay: .06s; }
+.cat-grid .cat-card:nth-child(3) { animation-delay: .09s; }
+.cat-grid .cat-card:nth-child(4) { animation-delay: .12s; }
+.cat-grid .cat-card:nth-child(5) { animation-delay: .15s; }
+.cat-grid .cat-card:nth-child(6) { animation-delay: .18s; }
+.cat-grid .cat-card:nth-child(n+7) { animation-delay: .21s; }
+
+/* ─── Refinamento do cabeçalho: leve blur de profundidade ─── */
+.cabecalho {
+  backdrop-filter: blur(8px) saturate(1.2);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  background: linear-gradient(180deg, rgba(17,43,30,.95) 0%, rgba(13,34,24,.82) 100%);
+}
+
+/* ─── Inputs: foco mais elegante ─── */
+.campo-input:focus,
+.busca-box:focus-within {
+  box-shadow: 0 0 0 3px rgba(200,150,12,.12), 0 2px 12px rgba(0,0,0,.2);
+}
+.busca-box {
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+.busca-box:focus-within {
+  border-color: var(--o1);
+}
+
+/* ─── Modal: entrada com escala suave (melhor que slide) ─── */
+.modal-box {
+  animation: modalPop .28s cubic-bezier(.34, 1.4, .64, 1);
+}
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(.92) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ─── Preços: leve brilho dourado para destaque ─── */
+.preco-valor,
+.preco-box-valor {
+  text-shadow: 0 1px 8px rgba(200,150,12,.15);
+}
+
+/* ─── Scroll suave em toda a aplicação ─── */
+.inicio-corpo,
+.produto-lista,
+.detalhe-corpo,
+.editar-corpo {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Logo do login: brilho pulsante mais suave ─── */
+.logo-symbol {
+  transition: transform .3s ease;
+}
+.logo-symbol:active {
+  transform: scale(.96);
+}
+
+/* ─── Respeitar quem prefere menos movimento (acessibilidade) ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

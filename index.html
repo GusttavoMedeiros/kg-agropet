@@ -9,12 +9,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="KG Agropet"/>
   <title>KG Agropet — Preços</title>
-  <link rel="manifest" href="manifest.json?v=8"/>
-  <link rel="icon" href="favicon.ico?v=8" sizes="any"/>
-  <link rel="shortcut icon" href="favicon.ico?v=8"/>
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=8"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/app-icon-192.png?v=8"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=8"/>
+  <link rel="manifest" href="manifest.json?v=9"/>
+  <link rel="icon" href="favicon.ico?v=9" sizes="any"/>
+  <link rel="shortcut icon" href="favicon.ico?v=9"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=9"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/app-icon-192.png?v=9"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=9"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -22,11 +22,119 @@
 </head>
 <body>
 
+<!-- ═══ SPRITE DE ÍCONES SVG (profissional, line style) ═══ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Loja / Início -->
+    <symbol id="ic-loja" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-4.5A1 1 0 015.45 4h13.1a1 1 0 01.95.68L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 20v-5a1 1 0 011-1h4a1 1 0 011 1v5"/>
+    </symbol>
+    <!-- Caixa / Produtos -->
+    <symbol id="ic-caixa" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M21 8l-9-5-9 5m18 0l-9 5m9-5v8l-9 5m0-8L3 8m9 5v8M3 8v8l9 5"/>
+    </symbol>
+    <!-- Lupa / Buscar -->
+    <symbol id="ic-busca" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M21 21l-4.3-4.3"/>
+    </symbol>
+    <!-- Sair / Logout -->
+    <symbol id="ic-sair" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4m7 14l5-5-5-5m5 5H9"/>
+    </symbol>
+    <!-- Escudo / Admin -->
+    <symbol id="ic-escudo" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 3v5c0 4.5-3 8.5-8 10-5-1.5-8-5.5-8-10V6l8-3z"/>
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/>
+    </symbol>
+    <!-- Olho / Consulta -->
+    <symbol id="ic-olho" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+    </symbol>
+    <!-- A-Z / Ordenar alfabético -->
+    <symbol id="ic-az" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 6h8M3 12h6M3 18h4m9-13l3 3m-3-3l-3 3m3-3v14m0 0l3-3m-3 3l-3-3"/>
+    </symbol>
+    <!-- Código / Hashtag -->
+    <symbol id="ic-codigo" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/>
+    </symbol>
+    <!-- Margem / Gráfico -->
+    <symbol id="ic-margem" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l4-4 3 3 5-6"/>
+    </symbol>
+    <!-- Fechar / X -->
+    <symbol id="ic-fechar" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+    </symbol>
+    <!-- Salvar / Disquete -->
+    <symbol id="ic-salvar" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M17 21v-8H7v8M7 3v5h8"/>
+    </symbol>
+    <!-- Lixeira / Excluir -->
+    <symbol id="ic-lixeira" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6h14zM10 11v6M14 11v6"/>
+    </symbol>
+    <!-- Voltar / Seta -->
+    <symbol id="ic-voltar" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m7-7l-7 7 7 7"/>
+    </symbol>
+    <!-- Mais / + -->
+    <symbol id="ic-mais" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 5v14M5 12h14"/>
+    </symbol>
+
+    <!-- ─── ÍCONES DE CATEGORIA ─── -->
+    <!-- Ração / Tigela com ossinho -->
+    <symbol id="ic-cat-racao" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M3 11h18a9 9 0 01-9 9 9 9 0 01-9-9z"/>
+      <circle cx="9" cy="6" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="13" cy="5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="11" cy="8.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </symbol>
+    <!-- Veterinário / Cruz médica -->
+    <symbol id="ic-cat-vet" viewBox="0 0 24 24">
+      <rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/>
+      <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M12 8v8M8 12h8"/>
+    </symbol>
+    <!-- Sementes / Broto -->
+    <symbol id="ic-cat-sementes" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8m0 0C12 9 9 7 4 7c0 5 3 6 8 6zm0 0c0-4 3-6 8-6 0 5-3 6-8 6z"/>
+    </symbol>
+    <!-- Defensivos / Gota -->
+    <symbol id="ic-cat-defensivos" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 3s6 7 6 11a6 6 0 01-12 0c0-4 6-11 6-11z"/>
+    </symbol>
+    <!-- Pet / Pata -->
+    <symbol id="ic-cat-pet" viewBox="0 0 24 24">
+      <ellipse cx="6" cy="11" rx="1.8" ry="2.4" fill="currentColor"/>
+      <ellipse cx="10" cy="8" rx="1.8" ry="2.4" fill="currentColor"/>
+      <ellipse cx="14" cy="8" rx="1.8" ry="2.4" fill="currentColor"/>
+      <ellipse cx="18" cy="11" rx="1.8" ry="2.4" fill="currentColor"/>
+      <path fill="currentColor" d="M12 13c-2.5 0-4.5 2-4.5 4 0 1.4 1.2 2 2.5 2 .9 0 1.4-.4 2-.4s1.1.4 2 .4c1.3 0 2.5-.6 2.5-2 0-2-2-4-4.5-4z"/>
+    </symbol>
+    <!-- Higiene / Frasco -->
+    <symbol id="ic-cat-higiene" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 3h6v3H9zM8 6h8a2 2 0 012 2v11a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2z"/>
+      <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M9 12h6"/>
+    </symbol>
+    <!-- Acessórios / Chave inglesa -->
+    <symbol id="ic-cat-acessorios" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M14.5 6a3.5 3.5 0 00-4.9 4.2l-5.4 5.4a1.5 1.5 0 102.1 2.1l5.4-5.4A3.5 3.5 0 0018 9.5l-2.3 2.3-1.8-.4-.4-1.8L15.8 7.3A3.5 3.5 0 0014.5 6z"/>
+    </symbol>
+    <!-- Outros / Caixa simples -->
+    <symbol id="ic-cat-outros" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M21 8l-9-5-9 5m18 0l-9 5m9-5v8l-9 5m0-8L3 8m9 5v8M3 8v8l9 5"/>
+    </symbol>
+  </defs>
+</svg>
+
+
 <!-- ═══ TELA: LOGIN ═══ -->
 <div id="tela-login" class="tela ativa">
-  <div class="bg-deco" aria-hidden="true">
-    <span>🌿</span><span>🐾</span><span>🌾</span>
-  </div>
+  <div class="bg-deco" aria-hidden="true"></div>
   <div class="login-wrap">
     <div class="logo-block">
       <div class="logo-symbol">
@@ -42,8 +150,8 @@
     <div class="campo-grupo">
       <label class="campo-label">Entrar como</label>
       <div class="tipo-row">
-        <button class="tipo-btn ativo" id="btn-admin" onclick="selecionarTipo('admin')">🛡 Administrador</button>
-        <button class="tipo-btn" id="btn-consulta" onclick="selecionarTipo('consulta')">👁 Consulta</button>
+        <button class="tipo-btn ativo" id="btn-admin" onclick="selecionarTipo('admin')"><svg class="ic-sm" aria-hidden="true"><use href="#ic-escudo"/></svg> Administrador</button>
+        <button class="tipo-btn" id="btn-consulta" onclick="selecionarTipo('consulta')"><svg class="ic-sm" aria-hidden="true"><use href="#ic-olho"/></svg> Consulta</button>
       </div>
     </div>
     <div class="campo-grupo">
@@ -63,48 +171,48 @@
 <!-- ═══ TELA: INÍCIO RÁPIDO ═══ -->
 <div id="tela-inicio" class="tela">
   <header class="cabecalho">
-    <span class="cabecalho-titulo">🏪 KG Agropet</span>
+    <span class="cabecalho-titulo"><svg class="ic-titulo" aria-hidden="true"><use href="#ic-loja"/></svg> KG Agropet</span>
     <div style="display:flex;align-items:center;gap:8px">
       <span class="badge" id="badge-inicio"></span>
-      <button class="btn-icone" onclick="carregarTelaBusca()" title="Buscar" aria-label="Buscar produtos">🔍</button>
-      <button class="btn-icone" onclick="confirmarLogout()" title="Sair" aria-label="Sair">⬡</button>
+      <button class="btn-icone" onclick="carregarTelaBusca()" title="Buscar" aria-label="Buscar produtos"><svg class="ic" aria-hidden="true"><use href="#ic-busca"/></svg></button>
+      <button class="btn-icone" onclick="confirmarLogout()" title="Sair" aria-label="Sair"><svg class="ic" aria-hidden="true"><use href="#ic-sair"/></svg></button>
     </div>
   </header>
   <div class="inicio-corpo" id="inicio-corpo"></div>
-  <button class="fab" id="fab-inicio" onclick="abrirCadastro()" aria-label="Adicionar produto">+</button>
+  <button class="fab" id="fab-inicio" onclick="abrirCadastro()" aria-label="Adicionar produto"><svg class="ic-fab" aria-hidden="true"><use href="#ic-mais"/></svg></button>
 </div>
 
 <!-- ═══ TELA: BUSCA ═══ -->
 <div id="tela-busca" class="tela">
   <header class="cabecalho">
-    <button class="btn-voltar" onclick="carregarTelaInicio()" aria-label="Voltar">←</button>
-    <span class="cabecalho-titulo">📦 Produtos</span>
+    <button class="btn-voltar" onclick="carregarTelaInicio()" aria-label="Voltar"><svg class="ic" aria-hidden="true"><use href="#ic-voltar"/></svg></button>
+    <span class="cabecalho-titulo"><svg class="ic-titulo" aria-hidden="true"><use href="#ic-caixa"/></svg> Produtos</span>
     <div style="display:flex;align-items:center;gap:8px">
       <span class="badge" id="badge-busca"></span>
     </div>
   </header>
   <div class="busca-area">
     <div class="ord-row">
-      <button class="ord-btn ativo" id="btn-ord-az" onclick="alternarOrdenacao('az')"><span class="ord-icon">🔤</span> A — Z</button>
-      <button class="ord-btn" id="btn-ord-cod" onclick="alternarOrdenacao('codigo')"><span class="ord-icon">🔢</span> Cód. 001↑</button>
-      <button class="ord-btn" id="btn-ord-margem" onclick="alternarOrdenacao('margem')"><span class="ord-icon">📈</span> Margem</button>
+      <button class="ord-btn ativo" id="btn-ord-az" onclick="alternarOrdenacao('az')"><svg class="ic-sm" aria-hidden="true"><use href="#ic-az"/></svg> A — Z</button>
+      <button class="ord-btn" id="btn-ord-cod" onclick="alternarOrdenacao('codigo')"><svg class="ic-sm" aria-hidden="true"><use href="#ic-codigo"/></svg> <span id="lbl-ord-cod">Cód.</span></button>
+      <button class="ord-btn" id="btn-ord-margem" onclick="alternarOrdenacao('margem')"><svg class="ic-sm" aria-hidden="true"><use href="#ic-margem"/></svg> Margem</button>
     </div>
     <div class="busca-box">
-      <span class="busca-icone">🔍</span>
+      <span class="busca-icone"><svg class="ic" aria-hidden="true"><use href="#ic-busca"/></svg></span>
       <input class="busca-input" id="inp-busca" type="search" placeholder="Buscar por nome ou código..." oninput="filtrarProdutos()" onblur="esconderSugestoes()" autocomplete="off"/>
-      <button class="busca-limpar" id="btn-limpar-busca" onclick="limparBusca()" aria-label="Limpar busca" style="display:none">✕</button>
+      <button class="busca-limpar" id="btn-limpar-busca" onclick="limparBusca()" aria-label="Limpar busca" style="display:none"><svg class="ic" aria-hidden="true"><use href="#ic-fechar"/></svg></button>
     </div>
     <div class="sugestoes-lista" id="sugestoes-lista" style="display:none"></div>
   </div>
   <div class="cats-scroll" id="cats-lista" role="list" aria-label="Categorias"></div>
   <div class="produto-lista" id="produto-lista" role="list" aria-label="Produtos"></div>
-  <button class="fab" id="fab-add" onclick="abrirCadastro()" aria-label="Adicionar produto">+</button>
+  <button class="fab" id="fab-add" onclick="abrirCadastro()" aria-label="Adicionar produto"><svg class="ic-fab" aria-hidden="true"><use href="#ic-mais"/></svg></button>
 </div>
 
 <!-- ═══ TELA: DETALHE ═══ -->
 <div id="tela-detalhe" class="tela">
   <header class="cabecalho">
-    <button class="btn-voltar" onclick="voltarParaBusca()" aria-label="Voltar">←</button>
+    <button class="btn-voltar" onclick="voltarParaBusca()" aria-label="Voltar"><svg class="ic" aria-hidden="true"><use href="#ic-voltar"/></svg></button>
     <span class="cabecalho-titulo">Detalhes</span>
     <span class="badge" id="badge-detalhe"></span>
   </header>
@@ -114,7 +222,7 @@
 <!-- ═══ TELA: EDITAR / CADASTRAR ═══ -->
 <div id="tela-editar" class="tela">
   <header class="cabecalho">
-    <button class="btn-voltar" id="editar-voltar-btn" aria-label="Voltar">←</button>
+    <button class="btn-voltar" id="editar-voltar-btn" aria-label="Voltar"><svg class="ic" aria-hidden="true"><use href="#ic-voltar"/></svg></button>
     <span class="cabecalho-titulo" id="editar-titulo">Editar produto</span>
     <span class="badge badge-admin">ADMIN</span>
   </header>
@@ -143,8 +251,8 @@
       </div>
     </div>
     <div id="edit-erro" class="erro-msg" style="display:none">Preencha todos os campos obrigatórios.</div>
-    <button class="btn-primario" onclick="salvarProduto()">💾 SALVAR</button>
-    <button class="btn-deletar" id="btn-deletar" onclick="deletarProduto()" style="display:none">🗑 Excluir produto</button>
+    <button class="btn-primario" onclick="salvarProduto()"><svg class="ic-sm" aria-hidden="true"><use href="#ic-salvar"/></svg> SALVAR</button>
+    <button class="btn-deletar" id="btn-deletar" onclick="deletarProduto()" style="display:none"><svg class="ic-sm" aria-hidden="true"><use href="#ic-lixeira"/></svg> Excluir produto</button>
   </div>
 </div>
 
