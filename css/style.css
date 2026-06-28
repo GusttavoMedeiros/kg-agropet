@@ -2139,3 +2139,58 @@ body::after {
     transition-duration: .01ms !important;
   }
 }
+
+/* ─── "Lembrar de mim" (checkbox da tela de login) ─── */
+.lembrar-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  margin: -4px 0 2px;
+  padding: 4px 2px;
+}
+.lembrar-linha input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.lembrar-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(200,150,12,.45);
+  background: rgba(10,26,16,.6);
+  flex-shrink: 0;
+  position: relative;
+  transition: background .18s ease, border-color .18s ease;
+}
+.lembrar-box::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--v1);
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform .18s cubic-bezier(.34, 1.56, .64, 1);
+}
+.lembrar-linha input:checked + .lembrar-box {
+  background: var(--go);
+  border-color: var(--o1);
+}
+.lembrar-linha input:checked + .lembrar-box::after {
+  transform: rotate(45deg) scale(1);
+}
+.lembrar-linha input:focus-visible + .lembrar-box {
+  box-shadow: 0 0 0 3px rgba(200,150,12,.2);
+}
+.lembrar-texto {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  color: var(--c1);
+  font-weight: 500;
+}

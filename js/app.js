@@ -154,6 +154,49 @@ function exigirAdmin() {
   return false;
 }
 
+// ─── "LEMBRAR DE MIM" (credenciais salvas no aparelho) ───
+// A senha é levemente embaralhada (Base64) só para não ficar à mostra
+// de forma escancarada. Isso NÃO é criptografia: use apenas em
+// aparelhos pessoais e confiáveis.
+const LEMBRAR_KEY = 'kg_lembrar';
+
+function _embaralhar(texto) {
+  try { return btoa(unescape(encodeURIComponent(texto))); }
+  catch { return ''; }
+}
+function _desembaralhar(texto) {
+  try { return decodeURIComponent(escape(atob(texto))); }
+  catch { return ''; }
+}
+
+function salvarCredenciais(usuario, senha) {
+  try {
+    localStorage.setItem(LEMBRAR_KEY, JSON.stringify({
+      u: usuario,
+      s: _embaralhar(senha)
+    }));
+  } catch { /* ignora */ }
+}
+
+function limparCredenciais() {
+  try { localStorage.removeItem(LEMBRAR_KEY); } catch { /* ignora */ }
+}
+
+// Ao abrir a tela de login, preenche os campos se houver credencial salva
+function preencherCredenciaisSalvas() {
+  try {
+    const bruto = localStorage.getItem(LEMBRAR_KEY);
+    if (!bruto) return;
+    const dados = JSON.parse(bruto);
+    const inpU = document.getElementById('inp-usuario');
+    const inpS = document.getElementById('inp-senha');
+    const chk  = document.getElementById('chk-lembrar');
+    if (inpU && dados.u) inpU.value = dados.u;
+    if (inpS && dados.s) inpS.value = _desembaralhar(dados.s);
+    if (chk) chk.checked = true;
+  } catch { /* ignora */ }
+}
+
 // ─── RECENTES (localStorage) ───────────────────
 
 function salvarRecente(produto) {
@@ -309,6 +352,15 @@ async function fazerLogin() {
     // 4. Guarda no estado e entra
     estado.tipo = tipo;
     estado.usuario = { usuario: nome.includes('@') ? nome.split('@')[0] : nome, tipo };
+
+    // "Lembrar de mim": salva ou limpa as credenciais conforme o checkbox
+    const chkLembrar = document.getElementById('chk-lembrar');
+    if (chkLembrar && chkLembrar.checked) {
+      salvarCredenciais(usuario, senha);
+    } else {
+      limparCredenciais();
+    }
+
     carregarCacheNomes(); // Cache para sugestões (em background)
     await carregarTelaInicio();
   } catch (e) {
@@ -372,6 +424,10 @@ function fazerLogout() {
   // Voltar para login com perfil Admin selecionado por padrão
   selecionarTipo('admin');
   irPara('tela-login');
+
+  // Se o usuário tinha "Lembrar de mim" ativo, repreenche os campos
+  // (o logout encerra a sessão, mas mantém a conveniência do login salvo)
+  preencherCredenciaisSalvas();
 }
 
 // ─── TELA INÍCIO RÁPIDO ────────────────────────
@@ -1082,6 +1138,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') fazerLogin();
   });
   document.getElementById('btn-ord-az').classList.add('ativo');
+
+  // Se há credenciais salvas ("Lembrar de mim"), preenche os campos
+  preencherCredenciaisSalvas();
 });
 
 // ─── SERVICE WORKER ────────────────────────────
