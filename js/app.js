@@ -281,22 +281,38 @@ async function fazerLogin() {
   btn.disabled = true;
 
   try {
-    const user = await supabase.getUsuario(usuario, senha);
-    if (!user) {
-      erro.textContent = 'Usuário ou senha incorretos.';
+    // O usuário digita "admin" ou "consulta"; convertemos para o e-mail interno.
+    // Também aceita se a pessoa digitar o e-mail completo.
+    const nome  = usuario.toLowerCase();
+    const email = nome.includes('@') ? nome : `${nome}@kgagropet.local`;
+
+    // 1. Autentica no Supabase Auth (gera o token da sessão)
+    await supabase.login(email, senha);
+
+    // 2. Descobre o perfil (admin/consulta) pela tabela protegida
+    const tipo = await supabase.getPerfil();
+    if (!tipo) {
+      await supabase.logout();
+      erro.textContent = 'Conta sem perfil definido. Fale com o administrador.';
       erro.style.display = 'block';
       return;
     }
-    if (user.tipo !== estado.tipo) {
-      erro.textContent = `Este usuário é do tipo "${user.tipo === 'admin' ? 'Administrador' : 'Consulta'}".`;
+
+    // 3. Confere se o perfil bate com o botão escolhido (admin/consulta)
+    if (tipo !== estado.tipo) {
+      await supabase.logout();
+      erro.textContent = `Esta conta é do tipo "${tipo === 'admin' ? 'Administrador' : 'Consulta'}".`;
       erro.style.display = 'block';
       return;
     }
-    estado.usuario = user;
+
+    // 4. Guarda no estado e entra
+    estado.tipo = tipo;
+    estado.usuario = { usuario: nome.includes('@') ? nome.split('@')[0] : nome, tipo };
     carregarCacheNomes(); // Cache para sugestões (em background)
     await carregarTelaInicio();
   } catch (e) {
-    erro.textContent = 'Erro de conexão. Verifique sua internet.';
+    erro.textContent = e.message || 'Erro de conexão. Verifique sua internet.';
     erro.style.display = 'block';
     console.error(e);
   } finally {
@@ -316,6 +332,9 @@ function cancelarLogout() {
 
 function fazerLogout() {
   document.getElementById('modal-logout').style.display = 'none';
+
+  // Encerra a sessão no Supabase Auth (apaga o token)
+  supabase.logout();
 
   // Reset COMPLETO do estado do app
   estado.usuario = null;

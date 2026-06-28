@@ -1,20 +1,60 @@
 // ═══════════════════════════════════════════════
 //  CONFIGURAÇÃO SUPABASE — KG AGROPET
+//  Login seguro via Supabase Auth (e-mail + senha).
+//  A chave pública (anon) NÃO lê mais as tabelas:
+//  todo acesso passa por uma sessão autenticada.
 // ═══════════════════════════════════════════════
 
 const SUPABASE_URL = 'https://xjivhwbrdjhipdfieqlg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqaXZod2JyZGpoaXBkZmllcWxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNjA4MzEsImV4cCI6MjA5MzkzNjgzMX0.v24Zopxx74_X-rNsKzGMDr0LU5OKdJsWD8036XaGp4s';
 
+// Onde guardamos a sessão (token) no navegador
+const SESSAO_KEY = 'kg_sessao';
+
 const supabase = {
   url: SUPABASE_URL,
   key: SUPABASE_KEY,
 
+  // ─── SESSÃO (token do usuário logado) ───
+  _sessao: null,
+
+  carregarSessao() {
+    try {
+      const bruto = localStorage.getItem(SESSAO_KEY);
+      this._sessao = bruto ? JSON.parse(bruto) : null;
+    } catch {
+      this._sessao = null;
+    }
+    return this._sessao;
+  },
+
+  _guardarSessao(sessao) {
+    this._sessao = sessao;
+    try {
+      if (sessao) {
+        localStorage.setItem(SESSAO_KEY, JSON.stringify(sessao));
+      } else {
+        localStorage.removeItem(SESSAO_KEY);
+      }
+    } catch { /* ignora erro de storage */ }
+  },
+
+  _tokenAtual() {
+    return this._sessao?.access_token || null;
+  },
+
+  estaLogado() {
+    return !!this._tokenAtual();
+  },
+
+  // ─── REQUISIÇÃO REST (sempre com o token da sessão) ───
   async request(path, options = {}) {
+    const token = this._tokenAtual();
     const res = await fetch(`${this.url}/rest/v1/${path}`, {
       ...options,
       headers: {
         'apikey': this.key,
-        'Authorization': `Bearer ${this.key}`,
+        'Authorization': `Bearer ${token || this.key}`,
         'Content-Type': 'application/json',
         'Prefer': options.prefer || 'return=representation',
         ...(options.headers || {})
@@ -27,9 +67,60 @@ const supabase = {
     return res.status === 204 ? null : res.json();
   },
 
+  // ═══════════════════════════════════════════════
+  //  AUTENTICAÇÃO (Supabase Auth)
+  // ═══════════════════════════════════════════════
+
+  async login(email, senha) {
+    const res = await fetch(`${this.url}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'apikey': this.key,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password: senha })
+    });
+    const dados = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = (dados.error_description || dados.msg || '').toLowerCase();
+      if (msg.includes('invalid')) {
+        throw new Error('Usuário ou senha incorretos.');
+      }
+      throw new Error(dados.error_description || dados.msg || 'Falha no login.');
+    }
+    this._guardarSessao(dados);
+    return dados;
+  },
+
+  async logout() {
+    const token = this._tokenAtual();
+    if (token) {
+      try {
+        await fetch(`${this.url}/auth/v1/logout`, {
+          method: 'POST',
+          headers: {
+            'apikey': this.key,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch { /* ignora */ }
+    }
+    this._guardarSessao(null);
+  },
+
+  // Busca o perfil (admin/consulta) do usuário logado
+  async getPerfil() {
+    const uid = this._sessao?.user?.id;
+    if (!uid) return null;
+    const data = await this.request(`perfis?id=eq.${uid}&select=tipo&limit=1`);
+    return data[0]?.tipo || null;
+  },
+
+  emailLogado() {
+    return this._sessao?.user?.email || null;
+  },
+
   // ─── Monta a query de busca de produtos (compartilhada) ───
-  // Centraliza a lógica de filtros/ordenação/busca usada por
-  // getProdutos e getProdutosComAbort (evita código duplicado).
   _montarQueryProdutos(filtros = {}) {
     const limit  = filtros.limit  || 50;
     const offset = filtros.offset || 0;
@@ -42,7 +133,6 @@ const supabase = {
     }
 
     if (filtros.busca) {
-      // Normalizar: remover acentos + minúsculas
       const termoLimpo = filtros.busca
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -50,17 +140,13 @@ const supabase = {
         .trim();
 
       const palavras = termoLimpo.split(/\s+/).filter(p => p.length > 0);
-
-      // Escapar caracteres especiais do PostgREST: ( ) , * \
       const esc = (s) => encodeURIComponent(s.replace(/[(),*\\]/g, ''));
 
       if (palavras.length === 1) {
-        // Uma palavra: busca no nome_busca OU no código
         const p   = esc(palavras[0]);
         const cod = esc(termoLimpo);
         query += `&or=(nome_busca.ilike.%2A${p}%2A,codigo.ilike.%2A${cod}%2A)`;
       } else {
-        // Várias palavras: TODAS devem aparecer no nome (AND)
         palavras.forEach(p => {
           query += `&nome_busca=ilike.%2A${esc(p)}%2A`;
         });
@@ -69,25 +155,21 @@ const supabase = {
     return query;
   },
 
-  // Buscar produtos com paginação
   async getProdutos(filtros = {}) {
     return this.request(this._montarQueryProdutos(filtros));
   },
 
-  // Buscar produto por código exato (para validação de duplicidade)
   async buscarPorCodigo(codigo) {
     const cod = encodeURIComponent(codigo);
     const data = await this.request(`produtos?codigo=eq.${cod}&select=id,nome,codigo&limit=1`);
     return data[0] || null;
   },
 
-  // Buscar produto por ID
   async getProdutoPorId(id) {
     const data = await this.request(`produtos?id=eq.${id}&select=*`);
     return data[0] || null;
   },
 
-  // Criar produto
   async criarProduto(produto) {
     return this.request('produtos', {
       method: 'POST',
@@ -95,7 +177,6 @@ const supabase = {
     });
   },
 
-  // Atualizar produto
   async atualizarProduto(id, dados) {
     return this.request(`produtos?id=eq.${id}`, {
       method: 'PATCH',
@@ -103,7 +184,6 @@ const supabase = {
     });
   },
 
-  // Deletar produto
   async deletarProduto(id) {
     return this.request(`produtos?id=eq.${id}`, {
       method: 'DELETE',
@@ -111,17 +191,6 @@ const supabase = {
     });
   },
 
-  // Buscar usuário
-  // OBS: usuário é case-insensitive (ilike) → aceita "Admin", "admin", "ADMIN".
-  //      A senha continua exata (eq) por segurança.
-  async getUsuario(usuario, senha) {
-    const data = await this.request(
-      `usuarios?usuario=ilike.${encodeURIComponent(usuario)}&senha=eq.${encodeURIComponent(senha)}&select=*`
-    );
-    return data[0] || null;
-  },
-
-  // Histórico de preços
   async getHistorico(produtoId) {
     return this.request(
       `historico_precos?produto_id=eq.${produtoId}&order=alterado_em.desc&limit=10&select=*`
@@ -135,8 +204,6 @@ const supabase = {
     });
   },
 
-  // Contagem por categoria via RPC (Stored Procedure no Supabase)
-  // O banco processa o GROUP BY e devolve apenas 8 linhas em vez de todos os produtos
   async getContagemCategorias() {
     try {
       const data = await this.request('rpc/contar_categorias', {
@@ -144,14 +211,12 @@ const supabase = {
         body: JSON.stringify({}),
         prefer: 'return=representation'
       });
-      // data = [{ categoria: 'Ração', total: 69 }, ...]
       const contagem = {};
       (data || []).forEach(row => {
         contagem[row.categoria] = row.total;
       });
       return contagem;
     } catch (e) {
-      // Fallback: se a RPC não existir ainda, usa a query direta
       console.warn('RPC contar_categorias indisponível, usando fallback:', e.message);
       const data = await this.request('produtos?select=categoria');
       const contagem = {};
@@ -162,26 +227,24 @@ const supabase = {
     }
   },
 
-  // Cancela requisição de busca anterior para evitar race conditions
+  // ─── Busca com AbortController (evita race conditions) ───
   _abortController: null,
 
   async getProdutosComAbort(filtros = {}) {
-    // Cancela qualquer busca em andamento antes de iniciar a nova
     if (this._abortController) {
       this._abortController.abort();
     }
     this._abortController = new AbortController();
     const signal = this._abortController.signal;
 
-    // Usa a mesma lógica de montagem de query (sem duplicar código)
     const query = this._montarQueryProdutos(filtros);
+    const token = this._tokenAtual();
 
-    // Passa o signal do AbortController para o fetch
     const res = await fetch(`${this.url}/rest/v1/${query}`, {
       signal,
       headers: {
         'apikey': this.key,
-        'Authorization': `Bearer ${this.key}`,
+        'Authorization': `Bearer ${token || this.key}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       }
@@ -194,3 +257,6 @@ const supabase = {
     return res.json();
   }
 };
+
+// Ao carregar o script, recupera a sessão salva (se houver)
+supabase.carregarSessao();
