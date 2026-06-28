@@ -2149,12 +2149,15 @@ body::after {
   user-select: none;
   margin: -4px 0 2px;
   padding: 4px 2px;
+  position: relative;
 }
 .lembrar-linha input[type="checkbox"] {
   position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
+  margin: 0;
+  pointer-events: none;
 }
 .lembrar-box {
   width: 20px;

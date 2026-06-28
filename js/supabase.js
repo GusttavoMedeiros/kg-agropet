@@ -48,7 +48,7 @@ const supabase = {
   },
 
   // ─── REQUISIÇÃO REST (sempre com o token da sessão) ───
-  async request(path, options = {}) {
+  async request(path, options = {}, _jaRenovou = false) {
     const token = this._tokenAtual();
     const res = await fetch(`${this.url}/rest/v1/${path}`, {
       ...options,
@@ -60,11 +60,47 @@ const supabase = {
         ...(options.headers || {})
       }
     });
+
+    // Token expirado (401/403) → tenta renovar UMA vez e repetir a requisição
+    if ((res.status === 401 || res.status === 403) && token && !_jaRenovou) {
+      const renovou = await this._renovarSessao();
+      if (renovou) {
+        return this.request(path, options, true);
+      }
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Erro na requisição');
     }
     return res.status === 204 ? null : res.json();
+  },
+
+  // Renova a sessão usando o refresh_token (quando o token de acesso expira).
+  // Retorna true se conseguiu renovar, false se a sessão acabou de vez.
+  async _renovarSessao() {
+    const refresh = this._sessao?.refresh_token;
+    if (!refresh) return false;
+    try {
+      const res = await fetch(`${this.url}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: {
+          'apikey': this.key,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refresh_token: refresh })
+      });
+      if (!res.ok) {
+        // Refresh inválido/expirado → limpa a sessão
+        this._guardarSessao(null);
+        return false;
+      }
+      const dados = await res.json();
+      this._guardarSessao(dados);
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   // ═══════════════════════════════════════════════
@@ -230,7 +266,7 @@ const supabase = {
   // ─── Busca com AbortController (evita race conditions) ───
   _abortController: null,
 
-  async getProdutosComAbort(filtros = {}) {
+  async getProdutosComAbort(filtros = {}, _jaRenovou = false) {
     if (this._abortController) {
       this._abortController.abort();
     }
@@ -249,6 +285,14 @@ const supabase = {
         'Prefer': 'return=representation'
       }
     });
+
+    // Token expirado → renova uma vez e repete
+    if ((res.status === 401 || res.status === 403) && token && !_jaRenovou) {
+      const renovou = await this._renovarSessao();
+      if (renovou) {
+        return this.getProdutosComAbort(filtros, true);
+      }
+    }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

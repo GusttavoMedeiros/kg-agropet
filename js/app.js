@@ -1141,7 +1141,33 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Se há credenciais salvas ("Lembrar de mim"), preenche os campos
   preencherCredenciaisSalvas();
+
+  // Auto-login: se já existe uma sessão válida salva, entra direto
+  // (sem precisar digitar de novo). Se a sessão expirou, fica no login.
+  tentarAutoLogin();
 });
+
+// Tenta entrar automaticamente usando a sessão salva no aparelho.
+async function tentarAutoLogin() {
+  if (!supabase.estaLogado()) return; // sem sessão → fica na tela de login
+
+  try {
+    // Confirma que a sessão ainda é válida buscando o perfil.
+    // Se o token expirou, o request renova sozinho; se não der, cai no catch.
+    const tipo = await supabase.getPerfil();
+    if (!tipo) return; // sessão inválida → fica no login
+
+    estado.tipo = tipo;
+    const email = supabase.emailLogado() || '';
+    estado.usuario = { usuario: email.split('@')[0] || 'usuário', tipo };
+    selecionarTipo(tipo);
+    carregarCacheNomes();
+    await carregarTelaInicio();
+  } catch (e) {
+    // Sessão expirada/ inválida → permanece na tela de login normalmente
+    console.warn('Auto-login não realizado:', e.message);
+  }
+}
 
 // ─── SERVICE WORKER ────────────────────────────
 if ('serviceWorker' in navigator) {
