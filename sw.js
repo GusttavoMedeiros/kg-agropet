@@ -1,6 +1,6 @@
 // Service Worker — KG Agropet PWA
 // IMPORTANTE: incrementar versão a cada atualização para forçar refresh
-const CACHE = 'kg-agropet-v16';
+const CACHE = 'kg-agropet-v17';
 
 self.addEventListener('install', e => {
   self.skipWaiting();

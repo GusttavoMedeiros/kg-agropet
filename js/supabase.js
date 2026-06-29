@@ -10,6 +10,9 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Onde guardamos a sessão (token) no navegador
 const SESSAO_KEY = 'kg_sessao';
+// Marca que o usuário pediu "continuar conectado" (Lembrar de mim).
+// Só uma sessão com essa marca sobrevive ao fechamento do app.
+const LEMBRAR_FLAG = 'kg_lembrar_sessao';
 
 const supabase = {
   url: SUPABASE_URL,
@@ -20,7 +23,17 @@ const supabase = {
 
   carregarSessao() {
     try {
-      const bruto = localStorage.getItem(SESSAO_KEY);
+      // 1º procura a sessão temporária (some quando o app é fechado).
+      let bruto = sessionStorage.getItem(SESSAO_KEY);
+      if (!bruto) {
+        // 2º só usa a sessão permanente se o usuário marcou "Lembrar de mim".
+        //    Sessões antigas (sem a marca) são descartadas → cai no login.
+        if (localStorage.getItem(LEMBRAR_FLAG) === '1') {
+          bruto = localStorage.getItem(SESSAO_KEY);
+        } else {
+          localStorage.removeItem(SESSAO_KEY);
+        }
+      }
       this._sessao = bruto ? JSON.parse(bruto) : null;
     } catch {
       this._sessao = null;
@@ -28,13 +41,36 @@ const supabase = {
     return this._sessao;
   },
 
-  _guardarSessao(sessao) {
+  // Guarda (ou limpa) a sessão.
+  //  lembrar === true  → permanente (localStorage): continua conectado ao reabrir.
+  //  lembrar === false → temporária (sessionStorage): some ao fechar o app.
+  //  lembrar === null  → renovação de token: mantém a sessão onde ela já estava.
+  _guardarSessao(sessao, lembrar = null) {
     this._sessao = sessao;
     try {
-      if (sessao) {
-        localStorage.setItem(SESSAO_KEY, JSON.stringify(sessao));
-      } else {
+      if (!sessao) {
+        // Logout / sessão inválida → apaga tudo.
         localStorage.removeItem(SESSAO_KEY);
+        sessionStorage.removeItem(SESSAO_KEY);
+        localStorage.removeItem(LEMBRAR_FLAG);
+        return;
+      }
+      const dados = JSON.stringify(sessao);
+      if (lembrar === true) {
+        localStorage.setItem(SESSAO_KEY, dados);
+        localStorage.setItem(LEMBRAR_FLAG, '1');
+        sessionStorage.removeItem(SESSAO_KEY);
+      } else if (lembrar === false) {
+        sessionStorage.setItem(SESSAO_KEY, dados);
+        localStorage.removeItem(SESSAO_KEY);
+        localStorage.removeItem(LEMBRAR_FLAG);
+      } else {
+        // Renovação: mantém no mesmo lugar onde a sessão vive hoje.
+        if (localStorage.getItem(LEMBRAR_FLAG) === '1') {
+          localStorage.setItem(SESSAO_KEY, dados);
+        } else {
+          sessionStorage.setItem(SESSAO_KEY, dados);
+        }
       }
     } catch { /* ignora erro de storage */ }
   },
@@ -107,7 +143,7 @@ const supabase = {
   //  AUTENTICAÇÃO (Supabase Auth)
   // ═══════════════════════════════════════════════
 
-  async login(email, senha) {
+  async login(email, senha, lembrar = false) {
     const res = await fetch(`${this.url}/auth/v1/token?grant_type=password`, {
       method: 'POST',
       headers: {
@@ -124,7 +160,7 @@ const supabase = {
       }
       throw new Error(dados.error_description || dados.msg || 'Falha no login.');
     }
-    this._guardarSessao(dados);
+    this._guardarSessao(dados, lembrar);
     return dados;
   },
 

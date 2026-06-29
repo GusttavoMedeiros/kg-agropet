@@ -329,8 +329,12 @@ async function fazerLogin() {
     const nome  = usuario.toLowerCase();
     const email = nome.includes('@') ? nome : `${nome}@kgagropet.local`;
 
+    // Lê o "Lembrar de mim" ANTES de logar — ele decide se a sessão será
+    // permanente (continua conectado) ou temporária (pede login ao reabrir).
+    const lembrar = !!(document.getElementById('chk-lembrar')?.checked);
+
     // 1. Autentica no Supabase Auth (gera o token da sessão)
-    await supabase.login(email, senha);
+    await supabase.login(email, senha, lembrar);
 
     // 2. Descobre o perfil (admin/consulta) pela tabela protegida
     const tipo = await supabase.getPerfil();
@@ -353,9 +357,9 @@ async function fazerLogin() {
     estado.tipo = tipo;
     estado.usuario = { usuario: nome.includes('@') ? nome.split('@')[0] : nome, tipo };
 
-    // "Lembrar de mim": salva ou limpa as credenciais conforme o checkbox
-    const chkLembrar = document.getElementById('chk-lembrar');
-    if (chkLembrar && chkLembrar.checked) {
+    // "Lembrar de mim": além de manter a sessão, pré-preenche os campos
+    // numa próxima vez (útil se a sessão permanente expirar muito tempo depois).
+    if (lembrar) {
       salvarCredenciais(usuario, senha);
     } else {
       limparCredenciais();
