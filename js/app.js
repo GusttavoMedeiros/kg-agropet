@@ -948,11 +948,13 @@ function preencherSelectCategoria(valorAtual = '') {
   ).join('');
 }
 
-function abrirCadastro() {
+async function abrirCadastro() {
   if (!exigirAdmin()) return;
   document.getElementById('edit-id').value = '';
   document.getElementById('edit-nome').value = '';
-  document.getElementById('edit-codigo').value = '';
+  const campoCod = document.getElementById('edit-codigo');
+  campoCod.value = '';
+  campoCod.placeholder = 'Sugerindo próximo número…';
   document.getElementById('edit-compra').value = '';
   document.getElementById('edit-venda').value = '';
   document.getElementById('edit-erro').style.display = 'none';
@@ -961,6 +963,20 @@ function abrirCadastro() {
   document.getElementById('editar-voltar-btn').onclick = () => irPara('tela-busca');
   preencherSelectCategoria();
   irPara('tela-editar');
+
+  // Sugere o próximo código livre (maior + 1). Não trava a tela: preenche
+  // quando a resposta chega, e só se o admin ainda não começou a digitar.
+  // O admin pode apagar e digitar outro; a validação de código duplicado
+  // continua valendo na hora de salvar.
+  try {
+    const prox = await supabase.proximoCodigo();
+    // Mantém o formato de 3 dígitos (001, 010, 231...) pra ordenação continuar certa.
+    if (campoCod.value === '') campoCod.value = String(prox).padStart(3, '0');
+  } catch (e) {
+    console.error('Não foi possível sugerir o próximo código:', e);
+  } finally {
+    campoCod.placeholder = 'Ex: #001';
+  }
 }
 
 function abrirEdicao(id) {
@@ -984,7 +1000,10 @@ async function salvarProduto() {
   if (!exigirAdmin()) return;
   const id      = document.getElementById('edit-id').value;
   const nome    = document.getElementById('edit-nome').value.trim();
-  const codigo  = document.getElementById('edit-codigo').value.trim();
+  const codigoRaw = document.getElementById('edit-codigo').value.trim();
+  // Padroniza para 3 dígitos com zero à esquerda (001, 010...) pra ordenação
+  // funcionar. Vazio continua vazio (código é opcional).
+  const codigo  = codigoRaw ? codigoRaw.padStart(3, '0') : '';
   const cat     = document.getElementById('edit-categoria').value;
   const compra  = parseFloat(document.getElementById('edit-compra').value);
   const venda   = parseFloat(document.getElementById('edit-venda').value);

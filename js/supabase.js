@@ -237,6 +237,19 @@ const supabase = {
     return data[0] || null;
   },
 
+  // Sugere o próximo código livre: o MAIOR código atual + 1.
+  // Baixa só a coluna 'codigo' (bem leve) e calcula o maior número aqui,
+  // pra funcionar certo mesmo que o código seja guardado como texto.
+  async proximoCodigo() {
+    const data = await this.request('produtos?select=codigo');
+    let maior = 0;
+    for (const p of data) {
+      const n = parseInt(p.codigo, 10);
+      if (!isNaN(n) && n > maior) maior = n;
+    }
+    return maior + 1;
+  },
+
   async getProdutoPorId(id) {
     const data = await this.request(`produtos?id=eq.${id}&select=*`);
     return data[0] || null;
