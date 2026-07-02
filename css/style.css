@@ -2065,6 +2065,8 @@ body::after {
 .produto-lista .produto-card:nth-child(7)  { animation-delay: .14s; }
 .produto-lista .produto-card:nth-child(8)  { animation-delay: .16s; }
 .produto-lista .produto-card:nth-child(n+9) { animation-delay: .18s; }
+/* Scroll infinito: ao anexar páginas, não reanimar a lista inteira */
+.produto-lista.sem-anim .produto-card { animation: none; }
 
 /* Cards de categoria entram com leve escala */
 @keyframes catEntra {

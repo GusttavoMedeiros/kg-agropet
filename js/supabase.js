@@ -114,7 +114,22 @@ const supabase = {
 
   // Renova a sessão usando o refresh_token (quando o token de acesso expira).
   // Retorna true se conseguiu renovar, false se a sessão acabou de vez.
+  //
+  // TRAVA DE CONCORRÊNCIA: se várias requisições receberem 401 ao mesmo tempo
+  // (ex.: app reaberto após horas parado dispara buscas em paralelo), TODAS
+  // esperam a MESMA renovação, em vez de cada uma tentar renovar por conta
+  // própria — o refresh_token é de uso único, e renovações paralelas podem
+  // gravar tokens fora de ordem e derrubar a sessão sem motivo.
+  _renovacaoEmAndamento: null,
+
   async _renovarSessao() {
+    if (this._renovacaoEmAndamento) return this._renovacaoEmAndamento;
+    this._renovacaoEmAndamento = this._executarRenovacao()
+      .finally(() => { this._renovacaoEmAndamento = null; });
+    return this._renovacaoEmAndamento;
+  },
+
+  async _executarRenovacao() {
     const refresh = this._sessao?.refresh_token;
     if (!refresh) return false;
     try {

@@ -120,6 +120,15 @@ function calcularMargem(compra, venda) {
   return (((venda - compra) / compra) * 100).toFixed(1);
 }
 
+// Converte o preço digitado em número, aceitando vírgula OU ponto como
+// separador decimal ("96,50" e "96.50" viram 96.5). O teclado brasileiro
+// mostra vírgula — o campo type=number rejeitava isso em alguns aparelhos.
+function parsePreco(valor) {
+  const s = String(valor ?? '').trim().replace(',', '.');
+  if (s === '') return NaN;
+  return parseFloat(s);
+}
+
 function escaparHTML(valor) {
   return String(valor ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;',
@@ -154,27 +163,25 @@ function exigirAdmin() {
   return false;
 }
 
-// ─── "LEMBRAR DE MIM" (credenciais salvas no aparelho) ───
-// A senha é levemente embaralhada (Base64) só para não ficar à mostra
-// de forma escancarada. Isso NÃO é criptografia: use apenas em
-// aparelhos pessoais e confiáveis.
+// Atualiza o selo ADMIN/CONSULTA de um cabeçalho (mesma lógica nas 3 telas).
+function setBadge(elId) {
+  const b = document.getElementById(elId);
+  if (!b) return;
+  b.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
+  b.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
+}
+
+// ─── "LEMBRAR DE MIM" ───
+// Manter você conectado é papel da SESSÃO (ver supabase.js) — segura, com
+// tokens renováveis. Aqui guardamos apenas o NOME DE USUÁRIO, para
+// pré-preencher o campo caso a sessão expire um dia. A senha NÃO é mais
+// salva no aparelho (era um embaralhamento fraco em Base64, reversível
+// por qualquer pessoa com acesso ao telefone — risco sem necessidade).
 const LEMBRAR_KEY = 'kg_lembrar';
 
-function _embaralhar(texto) {
-  try { return btoa(unescape(encodeURIComponent(texto))); }
-  catch { return ''; }
-}
-function _desembaralhar(texto) {
-  try { return decodeURIComponent(escape(atob(texto))); }
-  catch { return ''; }
-}
-
-function salvarCredenciais(usuario, senha) {
+function salvarCredenciais(usuario) {
   try {
-    localStorage.setItem(LEMBRAR_KEY, JSON.stringify({
-      u: usuario,
-      s: _embaralhar(senha)
-    }));
+    localStorage.setItem(LEMBRAR_KEY, JSON.stringify({ u: usuario }));
   } catch { /* ignora */ }
 }
 
@@ -182,17 +189,19 @@ function limparCredenciais() {
   try { localStorage.removeItem(LEMBRAR_KEY); } catch { /* ignora */ }
 }
 
-// Ao abrir a tela de login, preenche os campos se houver credencial salva
+// Ao abrir a tela de login, preenche o usuário se houver registro salvo.
+// Migração: registros antigos ainda continham a senha embaralhada ("s");
+// ao encontrar um, regravamos só com o usuário — a senha antiga é apagada
+// do aparelho automaticamente.
 function preencherCredenciaisSalvas() {
   try {
     const bruto = localStorage.getItem(LEMBRAR_KEY);
     if (!bruto) return;
     const dados = JSON.parse(bruto);
+    if (dados.s) salvarCredenciais(dados.u || '');
     const inpU = document.getElementById('inp-usuario');
-    const inpS = document.getElementById('inp-senha');
     const chk  = document.getElementById('chk-lembrar');
     if (inpU && dados.u) inpU.value = dados.u;
-    if (inpS && dados.s) inpS.value = _desembaralhar(dados.s);
     if (chk) chk.checked = true;
   } catch { /* ignora */ }
 }
@@ -267,12 +276,9 @@ function alternarOrdenacao(nova) {
   // Atualizar texto dos botões com seta de direção
   atualizarTextosOrdenacao();
 
-  // Margem é ordenação local; az e codigo recarregam do servidor
-  if (nova === 'margem') {
-    renderizarProdutos(estado.produtos, false);
-  } else {
-    resetarECarregar();
-  }
+  // Toda troca de ordenação recarrega do servidor.
+  // (Margem busca o filtro completo de uma vez — ver carregarMaisProdutos.)
+  resetarECarregar();
 }
 
 function atualizarTextosOrdenacao() {
@@ -357,10 +363,10 @@ async function fazerLogin() {
     estado.tipo = tipo;
     estado.usuario = { usuario: nome.includes('@') ? nome.split('@')[0] : nome, tipo };
 
-    // "Lembrar de mim": além de manter a sessão, pré-preenche os campos
-    // numa próxima vez (útil se a sessão permanente expirar muito tempo depois).
+    // "Lembrar de mim": a sessão permanente mantém você conectado; aqui
+    // guardamos só o USUÁRIO para pré-preencher se a sessão expirar um dia.
     if (lembrar) {
-      salvarCredenciais(usuario, senha);
+      salvarCredenciais(usuario);
     } else {
       limparCredenciais();
     }
@@ -437,10 +443,7 @@ function fazerLogout() {
 // ─── TELA INÍCIO RÁPIDO ────────────────────────
 
 async function carregarTelaInicio() {
-  // Badge
-  const badge = document.getElementById('badge-inicio');
-  badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
-  badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
+  setBadge('badge-inicio');
 
   // FAB
   document.getElementById('fab-inicio').style.display =
@@ -535,9 +538,7 @@ async function voltarParaBusca() {
 // ─── TELA BUSCA ────────────────────────────────
 
 async function carregarTelaBusca() {
-  const badge = document.getElementById('badge-busca');
-  badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
-  badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
+  setBadge('badge-busca');
 
   document.getElementById('fab-add').style.display =
     estado.tipo === 'admin' ? 'flex' : 'none';
@@ -592,19 +593,30 @@ async function carregarMaisProdutos() {
 
   try {
     const busca = document.getElementById('inp-busca').value.trim();
+    // Margem é calculada (venda-compra)/compra — o servidor não sabe ordenar
+    // por ela. Ordenar só a página carregada mostraria um "top margem" FALSO
+    // (faltariam produtos ainda não baixados). Por isso, quando a ordenação é
+    // Margem, buscamos TODOS os produtos do filtro de uma vez e desligamos a
+    // paginação. Com o catálogo atual isso é uma única requisição leve.
+    const ordenaMargem = estado.ordenacao === 'margem';
     const filtros = {
       categoria: estado.categoriaAtiva,
       busca,
-      offset: estado.pagina * POR_PAGINA,
-      limit: POR_PAGINA,
+      offset: ordenaMargem ? 0 : estado.pagina * POR_PAGINA,
+      limit: ordenaMargem ? 1000 : POR_PAGINA,
       ordenacao: estado.ordenacao,
       direcao: estado.direcao,
     };
     // getProdutosComAbort cancela requisições antigas automaticamente (AbortController)
     const novos = await supabase.getProdutosComAbort(filtros);
     if (requisicaoAtual !== estado.requisicaoBuscaId) return;
-    if (!novos || novos.length < POR_PAGINA) estado.temMais = false;
-    estado.produtos = [...estado.produtos, ...novos];
+    if (ordenaMargem) {
+      estado.temMais = false;
+      estado.produtos = novos || [];
+    } else {
+      if (!novos || novos.length < POR_PAGINA) estado.temMais = false;
+      estado.produtos = [...estado.produtos, ...novos];
+    }
     estado.pagina++;
     renderizarProdutos(estado.produtos, true);
   } catch (e) {
@@ -651,6 +663,12 @@ function renderizarProdutos(produtos, manterScroll = false) {
   }
 
   const ordenados = ordenarProdutos(produtos);
+
+  // A animação de entrada (stagger) só faz sentido quando a lista aparece
+  // pela primeira vez. No scroll infinito, o innerHTML é reconstruído a cada
+  // página — sem esta trava, TODOS os cards reanimavam e a lista "piscava".
+  lista.classList.toggle('sem-anim', manterScroll && estado.pagina > 1);
+
   const rodape = estado.temMais
     ? `<div class="loading-mais" id="sentinel">Carregando mais...</div>`
     : `<div class="fim-lista">✓ ${produtos.length} produto${produtos.length !== 1 ? 's' : ''} carregado${produtos.length !== 1 ? 's' : ''}</div>`;
@@ -844,9 +862,7 @@ async function abrirDetalhe(id) {
   const corpo = document.getElementById('detalhe-corpo');
   corpo.innerHTML = '<div class="loading">Carregando...</div>';
 
-  const badge = document.getElementById('badge-detalhe');
-  badge.textContent = estado.tipo === 'admin' ? 'ADMIN' : 'CONSULTA';
-  badge.className = 'badge ' + (estado.tipo === 'admin' ? 'badge-admin' : 'badge-consulta');
+  setBadge('badge-detalhe');
 
   try {
     const p = await supabase.getProdutoPorId(id);
@@ -1005,8 +1021,8 @@ async function salvarProduto() {
   // funcionar. Vazio continua vazio (código é opcional).
   const codigo  = codigoRaw ? codigoRaw.padStart(3, '0') : '';
   const cat     = document.getElementById('edit-categoria').value;
-  const compra  = parseFloat(document.getElementById('edit-compra').value);
-  const venda   = parseFloat(document.getElementById('edit-venda').value);
+  const compra  = parsePreco(document.getElementById('edit-compra').value);
+  const venda   = parsePreco(document.getElementById('edit-venda').value);
   const erro    = document.getElementById('edit-erro');
 
   if (!nome || isNaN(compra) || isNaN(venda)) {
@@ -1063,18 +1079,28 @@ async function salvarProduto() {
 
   try {
     if (id) {
-      // Salvar histórico antes de atualizar
       const anterior = estado.produtoAtual;
-      if (anterior && (anterior.preco_compra !== compra || anterior.preco_venda !== venda)) {
-        await supabase.salvarHistorico({
-          produto_id: id,
-          preco_compra: anterior.preco_compra,
-          preco_venda: anterior.preco_venda,
-          alterado_em: new Date().toISOString(),
-          alterado_por: estado.usuario?.usuario || 'Admin'
-        });
-      }
+
+      // 1º atualiza o produto (a operação principal).
       await supabase.atualizarProduto(id, dados);
+
+      // 2º registra o histórico — DEPOIS do update, de propósito:
+      // se o histórico falhar, perdemos só uma linha de registro;
+      // na ordem antiga (histórico antes), uma falha no update deixava
+      // registrada uma "mudança de preço" que nunca aconteceu.
+      if (anterior && (anterior.preco_compra !== compra || anterior.preco_venda !== venda)) {
+        try {
+          await supabase.salvarHistorico({
+            produto_id: id,
+            preco_compra: anterior.preco_compra,
+            preco_venda: anterior.preco_venda,
+            alterado_em: new Date().toISOString(),
+            alterado_por: estado.usuario?.usuario || 'Admin'
+          });
+        } catch (eHist) {
+          console.warn('Produto salvo, mas o histórico não pôde ser registrado:', eHist);
+        }
+      }
       mostrarToast('✅ Produto atualizado!');
 
       // Atualizações em paralelo (em background)
