@@ -123,9 +123,12 @@ function calcularMargem(compra, venda) {
 // Converte o preço digitado em número, aceitando vírgula OU ponto como
 // separador decimal ("96,50" e "96.50" viram 96.5). O teclado brasileiro
 // mostra vírgula — o campo type=number rejeitava isso em alguns aparelhos.
+// VALIDAÇÃO ESTRITA: o campo de texto aceita qualquer tecla, então aqui
+// só passa o que é um número puro. Sem isso, "9 6" (espaço sem querer)
+// viraria 9 e salvaria o preço errado sem ninguém perceber.
 function parsePreco(valor) {
   const s = String(valor ?? '').trim().replace(',', '.');
-  if (s === '') return NaN;
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
   return parseFloat(s);
 }
 
@@ -865,7 +868,13 @@ async function abrirDetalhe(id) {
   setBadge('badge-detalhe');
 
   try {
-    const p = await supabase.getProdutoPorId(id);
+    // Produto e histórico em PARALELO: são independentes, e em sequência a
+    // tela demorava a soma das duas viagens ao servidor em vez da mais lenta.
+    const [p, historicoRes] = await Promise.all([
+      supabase.getProdutoPorId(id),
+      supabase.getHistorico(id).then(h => ({ ok: true, dados: h }))
+        .catch(e => ({ ok: false, erro: e }))
+    ]);
     if (!p) { corpo.innerHTML = '<div class="lista-vazia">Produto não encontrado.</div>'; return; }
     estado.produtoAtual = p;
     salvarRecente(p);
@@ -874,15 +883,10 @@ async function abrirDetalhe(id) {
     const lucro  = (p.preco_venda - p.preco_compra).toFixed(2);
     const isAdmin = estado.tipo === 'admin';
 
-    // Histórico de preços
-    let historico = [];
-    let erroHistorico = false;
-    try {
-      historico = await supabase.getHistorico(id);
-    } catch (e) {
-      erroHistorico = true;
-      console.warn('Erro ao carregar histórico:', e);
-    }
+    // Histórico de preços (falha nele não impede de ver o produto)
+    const historico = historicoRes.ok ? historicoRes.dados : [];
+    const erroHistorico = !historicoRes.ok;
+    if (erroHistorico) console.warn('Erro ao carregar histórico:', historicoRes.erro);
     const blocoHistorico = `
       <div class="hist-bloco">
         <div class="hist-titulo"><svg class="ic-secao" aria-hidden="true"><use href="#ic-margem"/></svg> Histórico de preços</div>
@@ -1002,8 +1006,9 @@ function abrirEdicao(id) {
   document.getElementById('edit-id').value = p.id;
   document.getElementById('edit-nome').value = p.nome;
   document.getElementById('edit-codigo').value = p.codigo || '';
-  document.getElementById('edit-compra').value = p.preco_compra;
-  document.getElementById('edit-venda').value = p.preco_venda;
+  // Preenche no formato brasileiro (vírgula), consistente com o placeholder
+  document.getElementById('edit-compra').value = String(p.preco_compra).replace('.', ',');
+  document.getElementById('edit-venda').value = String(p.preco_venda).replace('.', ',');
   document.getElementById('edit-erro').style.display = 'none';
   document.getElementById('btn-deletar').style.display = 'block';
   document.getElementById('editar-titulo').textContent = 'Editar produto';
@@ -1188,6 +1193,16 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-ord-az').classList.add('ativo');
 
+  // Tecla Escape fecha o modal aberto (logout ou confirmação) — conveniência
+  // de desktop; no celular nada muda.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const mLogout = document.getElementById('modal-logout');
+    if (mLogout && mLogout.style.display !== 'none') { cancelarLogout(); return; }
+    const mConf = document.getElementById('modal-confirmacao-dinamico');
+    if (mConf) document.getElementById('mcd-cancelar')?.click();
+  });
+
   // Se há credenciais salvas ("Lembrar de mim"), preenche os campos
   preencherCredenciaisSalvas();
 
@@ -1199,6 +1214,12 @@ window.addEventListener('DOMContentLoaded', () => {
 // Tenta entrar automaticamente usando a sessão salva no aparelho.
 async function tentarAutoLogin() {
   if (!supabase.estaLogado()) return; // sem sessão → fica na tela de login
+
+  // Feedback: sem isto, a tela de login "piscava" antes de entrar e dava
+  // a impressão de que era preciso digitar — quando o app já estava entrando.
+  const btn = document.querySelector('#tela-login .btn-primario');
+  const textoOriginal = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Entrando...'; btn.disabled = true; }
 
   try {
     // Confirma que a sessão ainda é válida buscando o perfil.
@@ -1215,6 +1236,8 @@ async function tentarAutoLogin() {
   } catch (e) {
     // Sessão expirada/ inválida → permanece na tela de login normalmente
     console.warn('Auto-login não realizado:', e.message);
+  } finally {
+    if (btn) { btn.textContent = textoOriginal || 'ENTRAR'; btn.disabled = false; }
   }
 }
 
