@@ -1,173 +1,43 @@
-# 📱 KG AGROPET — GUIA DE PUBLICAÇÃO
-### Do zero ao app instalado no celular
+# 📱 KG AGROPET — Guia de Manutenção e Publicação
+
+Este documento descreve a arquitetura atual do app e os procedimentos de
+manutenção. **Não contém (e nunca deve conter) senhas, chaves ou credenciais.**
 
 ---
 
-## VISÃO GERAL
+## Arquitetura
 
-Você vai precisar criar conta em dois serviços gratuitos:
-- **Supabase** → banco de dados (onde ficam os produtos e usuários)
-- **GitHub + Vercel** → onde o app fica hospedado na internet
+| Camada | Serviço | Função |
+|---|---|---|
+| Banco de dados + autenticação | Supabase | Tabelas, RLS e login por e-mail e senha (Supabase Auth) |
+| Código-fonte | GitHub | Este repositório (branch `main`) |
+| Hospedagem | Vercel | Publica automaticamente a cada push → https://kg-agropet.vercel.app |
 
-Tempo estimado: 30 a 40 minutos seguindo este guia.
+## Segurança (configuração atual)
 
----
+- **Login via Supabase Auth** — não há tabela própria de usuários nem senhas no código.
+- **RLS ativado em todas as tabelas** — a chave pública (`anon`) sozinha não lê
+  nada; todo acesso exige sessão autenticada.
+- **Perfis de acesso** (`admin` / `consulta`) ficam na tabela `perfis`, vinculada
+  ao usuário do Auth pelo `id`.
+- **Nunca** commitar chave `service_role`, senhas ou arquivos `.env`.
+  A `service_role` ignora o RLS e não existe neste projeto por decisão de design.
+- Sessão no app: temporária por padrão (sessionStorage); permanente apenas com
+  "Lembrar de mim".
 
-## PASSO 1 — Criar conta no Supabase (banco de dados)
+## Criar um novo usuário
 
-1. Acesse: https://supabase.com
-2. Clique em **"Start your project"**
-3. Faça login com sua conta Google (mais rápido)
-4. Clique em **"New project"**
-5. Preencha:
-   - **Name:** kg-agropet
-   - **Database Password:** crie uma senha forte e anote
-   - **Region:** South America (São Paulo)
-6. Clique em **"Create new project"** e aguarde (2 minutos)
+1. Supabase → **Authentication → Users → Add user**.
+2. Use senha forte e única — nunca senhas padrão ou documentadas.
+3. Vincule o perfil na tabela `perfis` com o tipo `admin` ou `consulta`.
 
----
+## Publicar alterações
 
-## PASSO 2 — Criar as tabelas no banco
+1. Commit + push na branch `main`.
+2. A Vercel publica automaticamente em https://kg-agropet.vercel.app.
+3. Nos celulares, o app instalado (PWA) atualiza sozinho na próxima abertura.
 
-Dentro do Supabase, clique em **"SQL Editor"** no menu lateral.
-Cole e execute cada bloco abaixo separadamente:
-
-### Tabela de Produtos:
-```sql
-CREATE TABLE produtos (
-  id            uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  nome          text NOT NULL,
-  codigo        text,
-  categoria     text NOT NULL,
-  preco_compra  numeric(10,2) NOT NULL DEFAULT 0,
-  preco_venda   numeric(10,2) NOT NULL DEFAULT 0,
-  atualizado_em timestamptz DEFAULT now(),
-  atualizado_por text
-);
-```
-
-### Tabela de Usuários:
-```sql
-CREATE TABLE usuarios (
-  id      uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  usuario text UNIQUE NOT NULL,
-  senha   text NOT NULL,
-  tipo    text NOT NULL CHECK (tipo IN ('admin', 'consulta'))
-);
-```
-
-### Inserir os dois usuários iniciais:
-```sql
--- Administrador (você)
-INSERT INTO usuarios (usuario, senha, tipo)
-VALUES ('admin', 'kg2026admin', 'admin');
-
--- Funcionário (consulta)
-INSERT INTO usuarios (usuario, senha, tipo)
-VALUES ('consulta', 'kg2026consulta', 'consulta');
-```
-⚠️ Anote essas senhas! Você pode alterar depois.
-
-### Permitir acesso público (necessário para o app):
-```sql
-ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "acesso_publico_produtos" ON produtos FOR ALL USING (true);
-CREATE POLICY "acesso_publico_usuarios" ON usuarios FOR ALL USING (true);
-```
-
----
-
-## PASSO 3 — Pegar as chaves do Supabase
-
-1. No Supabase, clique em **"Project Settings"** (ícone de engrenagem)
-2. Clique em **"API"**
-3. Copie:
-   - **Project URL** → algo como `https://xyzxyz.supabase.co`
-   - **anon public key** → uma chave longa
-
----
-
-## PASSO 4 — Colocar as chaves no app
-
-Abra o arquivo **`js/supabase.js`** e substitua:
-
-```javascript
-const SUPABASE_URL = 'COLE_SUA_URL_AQUI';
-const SUPABASE_KEY = 'COLE_SUA_CHAVE_AQUI';
-```
-
-Pelo que você copiou no passo anterior. Exemplo:
-```javascript
-const SUPABASE_URL = 'https://abcdefgh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
-```
-
----
-
-## PASSO 5 — Publicar no GitHub
-
-1. Acesse: https://github.com
-2. Clique em **"Sign up"** e crie uma conta gratuita
-3. Após o login, clique em **"New repository"**
-4. Preencha:
-   - **Repository name:** kg-agropet
-   - Marque **"Public"**
-5. Clique em **"Create repository"**
-6. Na próxima tela, clique em **"uploading an existing file"**
-7. Arraste TODOS os arquivos da pasta do app para lá
-8. Clique em **"Commit changes"**
-
----
-
-## PASSO 6 — Publicar no Vercel (hospedagem gratuita)
-
-1. Acesse: https://vercel.com
-2. Clique em **"Sign up"** → entre com sua conta GitHub
-3. Clique em **"Add New Project"**
-4. Selecione o repositório **kg-agropet**
-5. Clique em **"Deploy"**
-6. Aguarde 1 minuto
-7. Você receberá um link como: `https://kg-agropet.vercel.app`
-
-✅ Esse é o link do seu app! Ele funciona em qualquer celular.
-
----
-
-## PASSO 7 — Instalar no celular como app
-
-### Android (Chrome):
-1. Abra o link no Chrome
-2. Toque nos **3 pontinhos** no canto superior direito
-3. Toque em **"Adicionar à tela inicial"**
-4. Confirme — o app aparece como ícone na tela inicial
-
-### iPhone (Safari):
-1. Abra o link no Safari
-2. Toque no ícone de **compartilhar** (quadrado com seta para cima)
-3. Toque em **"Adicionar à Tela Inicial"**
-4. Confirme
-
----
-
-## PASSO 8 — Primeiro acesso
-
-Abra o app e entre com:
-
-| Tipo          | Usuário   | Senha           |
-|---------------|-----------|-----------------|
-| Administrador | admin     | kg2026admin     |
-| Consulta      | consulta  | kg2026consulta  |
-
-**Lembre de alterar as senhas depois!** Vá no Supabase → SQL Editor:
-```sql
-UPDATE usuarios SET senha = 'nova_senha_aqui' WHERE usuario = 'admin';
-```
-
----
-
-## RESUMO DOS ARQUIVOS
+## Estrutura dos arquivos
 
 ```
 kg-agropet/
@@ -177,16 +47,9 @@ kg-agropet/
 ├── css/
 │   └── style.css       ← Visual (verde + dourado)
 └── js/
-    ├── supabase.js     ← Banco de dados ⚠️ coloque suas chaves aqui
-    └── app.js          ← Toda a lógica do app
+    ├── supabase.js     ← Cliente Supabase (apenas chave anon pública)
+    └── app.js          ← Lógica do app
 ```
-
----
-
-## SUPORTE
-
-Se travar em algum passo, anote onde parou e me chame.
-Posso ajudar com qualquer etapa do processo.
 
 ---
 
